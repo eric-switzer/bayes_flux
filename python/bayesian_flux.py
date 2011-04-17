@@ -80,7 +80,7 @@ def posterior_twoband_gaussian(s_measured1, s_measured2, covmatrix, freq_bands, 
       # find the flux prior from the index prior 
       # transform index prior into flux prior.  first, calculate effective index for each value of band2 flux.
       index_smax2 = np.log(fluxaxis/fluxaxis[i])/ln_freq_ratio
-      index_indices = np.round((index_smax2 - min_index)/delta_index)
+      index_indices = np.round((index_smax2 - min_index)/delta_index) # TODO: do this with http://docs.python.org/release/2.5.2/lib/bisect-example.html?
  
       whneg = (index_indices < 0)
       index_indices[np.where(whneg)] = 0

@@ -24,6 +24,14 @@ param = {
   "neglect_calerror" : False,
   "verbose" : True
 }
+# suggestions for calculating cov_calbeam for other surveys: 
+# * use flux recovery simulations to estimate the calibration/beam error covariance 
+#    -- use a set of PSFs drawn from the error model and look at the scatter in the flux. 
+#    -- may also do this in Fourier space or multipole space  
+# * Find the covariance of background fluctuations by applying the matched 
+#   finding/photometry filter, and calculating the covariance between bands. The map could either be: 
+#    -- empirical noise estimate (e.g. difference map) + CMB etc. realization + source realization up to the threshold
+#    -- the real map with sources removed down to the threshold
 
 # rename some fields from the self-describing input ascii catalog
 translate={'ID':param['keyfield_name'], 'S_150':param['flux1name'], 'noise_150':param['sigma1name'], 'S_220':param['flux2name'], 'noise_220':param['sigma2name']}
