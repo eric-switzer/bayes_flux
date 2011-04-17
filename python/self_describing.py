@@ -1,4 +1,5 @@
 import numpy as np
+import shutil
 # TODO: write write_selfdescribing_numpy which writes arrays out
 
 def load_selfdescribing_numpy(filename, swaps={}, desctoken="desc:", commenttoken="#", typetoken="@@", verbose=False):
@@ -55,9 +56,46 @@ def load_selfdescribing_numpy(filename, swaps={}, desctoken="desc:", commenttoke
 
   return output
 
+# TODO: extend this to support string fields
+def write_selfdescribing_numpy(filename, data, swaps={}, fmt='%18e', delimiter=' ', newline='\n', comment=None, 
+                               desctoken="desc:", commenttoken="#", typetoken="@@", verbose=False):
+  '''Save a record array in a self-describing format.
+     Currently uses numpy's savetxt, which does not support string fields. 
+
+     ERS: Apr. 17 '11
+  '''
+  fh = file(filename, 'w')
+  # print the comment part of the header
+  if comment:
+    comment=comment.replace(newline, newline+commenttoken+" ")
+    fh.write(commenttoken+" "+comment+newline)
+ 
+  # rename the requested variables and get the type strings
+  varnames = data.dtype.names
+  vartypes = map(lambda x: data.dtype.fields[x], varnames) # 'fields' is not ordered
+  vartypes = map(lambda x: x[0].str, vartypes)
+  varnames = map(lambda x: x in swaps.keys() and swaps[x] or x, varnames)
+
+  # write out the description string
+  descstring = commenttoken+" "+desctoken
+  for (name, dtype) in zip(varnames, vartypes):
+    descstring += " "+name+typetoken+dtype
+  if verbose: print "write_selfdescribing_numpy: data description "+descstring  
+  descstring += newline
+  fh.write(descstring)
+  fh.close()
+
+  # append the data as numpy savetxt ascii 
+  fh = file(filename, 'a')
+  np.savetxt(fh, data, fmt=fmt, delimiter=delimiter, newline=newline)
+  fh.close()
+
 if __name__ == "__main__":
   data = load_selfdescribing_numpy("testfile.dat", swaps={"fancy_name_for_x":"x", "fancy_name_for_y":"y"}, verbose=True)
   print data
+  print data.dtype
   print data['x']
-  #np.savetxt("testfile.out", data, fmt='%5.3g', delimiter=' ', newline='\n')
-  #print load_selfdescribing_numpy("testfile.dat", desctoken="stupid:", verbose=True)
+  write_selfdescribing_numpy("testfile.out", data, comment="This is a \ntest file", swaps={"x":"fancy_name_for_x", "y":"fancy_name_for_y"}, verbose=True)
+  data = load_selfdescribing_numpy("testfile.out", swaps={"fancy_name_for_x":"x", "fancy_name_for_y":"y"}, verbose=True)
+  print data
+  print data.dtype
