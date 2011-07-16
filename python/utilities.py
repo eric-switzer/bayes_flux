@@ -5,11 +5,11 @@ output formatting.
 """
 
 import os
-import subprocess
 import numpy as np
 from scipy import interpolate
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+import json
 import pyfits
 
 
@@ -24,7 +24,7 @@ def load_fits_primary(filename, transpose=True):
 
 
 def compare_matrices_fits(matrix1, matrix2, filename, fractional=False,
-                          replacenan=0., opends9=False):
+                          replacenan=0.):
     """write out a fits file that makes it easy to compare matrices in ds9:
     ds9 -multiframe filename.fits
     """
@@ -53,10 +53,7 @@ def compare_matrices_fits(matrix1, matrix2, filename, fractional=False,
 
     thdulist.writeto(filename)
 
-    if opends9:
-        retcode = subprocess.call(["ds9", "-multiframe " + filename])
-
-    return retcode
+    return err
 
 
 def compare_matrices(matrix1, matrix2, logplot=False):
@@ -169,7 +166,6 @@ def spline_derivative(x_vector, y_vector):
 
 def store_json(data, filename):
     """save some structure using json"""
-    import json
     with open(filename, 'w') as fileout:
         fileout.write(json.dumps(data, separators=(', \n', ': ')))
 

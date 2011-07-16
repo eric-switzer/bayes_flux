@@ -16,13 +16,9 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
               over='raise', under='raise',
               invalid='raise')
 
-    numcatalog = catalog.size
     fielddtype = catalog.dtype.fields
-    # TODO: check that all posterior fields have the same length
-    # assuming constant
-    nposterior = len(gp['percentiles'])
 
-    print "Starting process_ptsrc_catalog_alpha on " + repr(numcatalog) + \
+    print "Starting process_ptsrc_catalog_alpha on " + repr(catalog.size) + \
           " sources with key field name: " + repr(gp['keyfield_name'])
 
     #print "process_catalog writing catalog to database file: " + \
@@ -56,23 +52,24 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
     augmented_fielddtype = dict(fielddtype)
 
     # each output has nposterior points along the CDF of the posterior
+    nposterior = repr(len(gp['percentiles']))
     augmented_fielddtype[gp['flux1name'] + "_posterior"] = \
-        (repr(nposterior) + flux1type.name, 0)
+        (nposterior + flux1type.name, 0)
 
     augmented_fielddtype[gp['flux2name'] + "_posterior"] = \
-        (repr(nposterior) + flux1type.name, 0)
+        (nposterior + flux1type.name, 0)
 
     augmented_fielddtype["alpha_posterior"] = \
-        (repr(nposterior) + flux1type.name, 0)
+        (nposterior + flux1type.name, 0)
 
     augmented_fielddtype[gp['flux1name'] + "_posterior_swap"] = \
-        (repr(nposterior) + flux1type.name, 0)
+        (nposterior + flux1type.name, 0)
 
     augmented_fielddtype[gp['flux2name'] + "_posterior_swap"] = \
-        (repr(nposterior) + flux1type.name, 0)
+        (nposterior + flux1type.name, 0)
 
     augmented_fielddtype["alpha_posterior_swap"] = \
-        (repr(nposterior) + flux1type.name, 0)
+        (nposterior + flux1type.name, 0)
 
     # number of drawings and raw simple alpha
     augmented_fielddtype["numalphadist"] = (flux1type.name, 0)
@@ -88,7 +85,7 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
     for name in names:
         formats.append(augmented_fielddtype[name][0])
 
-    augmented_catalog = np.zeros(numcatalog,
+    augmented_catalog = np.zeros(catalog.size,
                                  dtype={'names': names,
                                         'formats': formats})
 
@@ -112,7 +109,7 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
         dnds_tot_linear_band1 = dnds.dnds_total(input_s_linear, "143GHz")
         dnds_tot_linear_band2 = dnds.dnds_total(input_s_linear, "217GHz")
 
-    for srcindex in np.arange(numcatalog):
+    for srcindex in np.arange(catalog.size):
         flux1 = augmented_catalog[srcindex][gp['flux1name']]
         flux2 = augmented_catalog[srcindex][gp['flux2name']]
         sigma1 = augmented_catalog[srcindex][gp['sigma1name']]
