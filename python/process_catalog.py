@@ -78,18 +78,15 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
 
     # make a new numpy array which is augmented to include outputs
     # and copy input data into this
-    input_names = fielddtype.keys()
-    names = augmented_fielddtype.keys()
     formats = []
-
-    for name in names:
+    for name in augmented_fielddtype.keys():
         formats.append(augmented_fielddtype[name][0])
 
     augmented_catalog = np.zeros(catalog.size,
-                                 dtype={'names': names,
+                                 dtype={'names': augmented_fielddtype.keys(),
                                         'formats': formats})
 
-    for name in input_names:
+    for name in fielddtype.keys():
         augmented_catalog[:][name] = catalog[:][name]
 
     # calculate theory dN/dS
@@ -163,19 +160,18 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
 
         augmented_catalog[srcindex]["alpha_posterior_swap"] = posterior_swap[2]
 
-        print "The percentile points of the posterior \
-               band 1 flux are [mJy]: " + \
+        prefix = "The percentile points of the posterior "
+        print prefix + "band 1 flux are [mJy]: " + \
                utils.pm_error(posterior[0] * 1000., "%5.3g") + \
                " swapped detection: " + \
                utils.pm_error(posterior_swap[0] * 1000., "%5.3g")
 
-        print "The percentile points of the posterior \
-               band 2 flux are [mJy]: " + \
+        print prefix + "band 2 flux are [mJy]: " + \
                utils.pm_error(posterior[1] * 1000., "%5.3g") + \
                " swapped detection: " + \
                utils.pm_error(posterior_swap[1] * 1000., "%5.3g")
 
-        print "The percentile points of the spectral are: " + \
+        print prefix + "spectral index are: " + \
                utils.pm_error(posterior[2], "%5.3g") + \
                " swapped detection: " + \
                utils.pm_error(posterior_swap[2], "%5.3g")
@@ -265,7 +261,6 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, s_in, dnds1,
 
         alpha_dist = np.sum(posterior_fluxindex, axis=0)
         #alpha_dist = np.sum(posterior_fluxindex, axis=1)
-        flux_pdf2d = posterior_fluxflux
         flux1_dist = np.sum(posterior_fluxflux, axis=0)
         flux2_dist = np.sum(posterior_fluxflux, axis=1)
     else:
@@ -282,8 +277,6 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, s_in, dnds1,
                                                          alpha_prior)
 
         alpha_dist = np.sum(posterior_fluxindex, axis=0)
-        #alpha_dist = np.sum(posterior_fluxindex, axis=1)
-        flux_pdf2d = posterior_fluxflux
         flux1_dist = np.sum(posterior_fluxflux, axis=1)
         flux2_dist = np.sum(posterior_fluxflux, axis=0)
 
@@ -294,7 +287,7 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, s_in, dnds1,
     flux2_percentiles = utils.percentile_points(fluxvec, flux2_dist,
                                                 gp['percentiles'])
 
-    alpha_percentiles = utils.percentile_points(fluxvec, alpha_dist,
+    alpha_percentiles = utils.percentile_points(alphavec, alpha_dist,
                                                 gp['percentiles'])
 
     return (flux1_percentiles, flux2_percentiles, alpha_percentiles)

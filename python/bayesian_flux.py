@@ -11,7 +11,6 @@ from numpy import linalg as la
 # TODO: optionally pass P(S_max) instead of deriving it internally from dN/dS
 # TODO: check that all relevant array dimensions agree
 # TODO: do the axis vectors have to be uniform linear spacing, or can they be
-# TODO: replace newaxis with None
 #       more general (index axis must be?)
 def posterior_twoband_gaussian(s_measured1, s_measured2,
                                covmatrix, freq_bands, fluxaxis, indexaxis,
@@ -36,20 +35,19 @@ def posterior_twoband_gaussian(s_measured1, s_measured2,
     """
 
     freq_ratio = freq_bands[1] / freq_bands[0]
-    n_fluxaxis = fluxaxis.size
-    n_indexaxis = indexaxis.size
+    (n_fluxaxis, n_indexaxis) = (fluxaxis.size, indexaxis.size)
     covinv = la.inv(covmatrix)
 
     np.seterr(all='ignore')     # TODO treat these instead
     # find the likelihood P(S_1m, S_2m | S_1i, index)
     # assuming Gaussian noise with covmatrix
     residual_fluxindex = np.zeros((2, n_fluxaxis, n_indexaxis))
-    residual_fluxindex[0, :, :] = np.repeat(fluxaxis[:, np.newaxis],
+    residual_fluxindex[0, :, :] = np.repeat(fluxaxis[:, None],
                                             n_indexaxis, 1)
     # S_2 = S_1 (nu2/nu1)^index
     index_multiplier = (freq_ratio) ** indexaxis
     residual_fluxindex[1, :, :] = residual_fluxindex[0, :, :] * \
-                                    index_multiplier[np.newaxis, :]
+                                    index_multiplier[None, :]
     residual_fluxindex[0, :, :] -= s_measured1
     residual_fluxindex[1, :, :] -= s_measured2
     # TODO: einsum abi ij abj, residual_fluxindex, covinv, residual_fluxindex?
@@ -63,7 +61,7 @@ def posterior_twoband_gaussian(s_measured1, s_measured2,
     # or flux1 and the spectral index (fluxindex)
     # TODO: can this be shortened to a matrix product eps Cov^-1 eps^T?
     residual_fluxflux = np.zeros((2, n_fluxaxis, n_fluxaxis))
-    residual_fluxflux[0, :, :] = np.repeat(fluxaxis[:, np.newaxis],
+    residual_fluxflux[0, :, :] = np.repeat(fluxaxis[:, None],
                                            n_fluxaxis, 1)
     residual_fluxflux[1, :, :] = residual_fluxflux[0, :, :].transpose()
     residual_fluxflux[0, :, :] -= s_measured1
@@ -81,9 +79,9 @@ def posterior_twoband_gaussian(s_measured1, s_measured2,
                                           bounds_error=False, fill_value=0.)
     pdf_prior_flux_int = interpolant(fluxaxis)
     # is this correct, or its transpose?
-    fluxprior_fluxindex = np.repeat(pdf_prior_flux_int[:, np.newaxis],
+    fluxprior_fluxindex = np.repeat(pdf_prior_flux_int[:, None],
                                     n_indexaxis, 1)
-    fluxprior_fluxflux = np.repeat(pdf_prior_flux_int[:, np.newaxis],
+    fluxprior_fluxflux = np.repeat(pdf_prior_flux_int[:, None],
                                    n_fluxaxis, 1)
     np.seterr(all='raise')
 
@@ -102,9 +100,9 @@ def posterior_twoband_gaussian(s_measured1, s_measured2,
         # S_2 = S_1 (nu2/nu1)^index
         index_multiplier = (freq_ratio) ** indexaxis * np.abs(ln_freq_ratio)
         # is n_indexaxis x n_fluxaxis
-        index_prior_matrix = np.repeat(fluxaxis[:, np.newaxis],
+        index_prior_matrix = np.repeat(fluxaxis[:, None],
                                         n_indexaxis, 1) * \
-                                        index_multiplier[np.newaxis, :]
+                                        index_multiplier[None, :]
         # try this for comparison
         #for i in np.arange(n_fluxaxis):
         #    index_prior_matrix[i, :] = fluxaxis[i] * \
