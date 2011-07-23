@@ -1,4 +1,5 @@
-import sys
+"""Load the published SPT point source raw flux catalogs, deboost and compare
+"""
 import numpy as np
 import process_catalog as process
 import self_describing as sd
@@ -51,8 +52,9 @@ translate = {'ID': param['keyfield_name'],
              'S_220': param['flux2name'],
              'noise_220': param['sigma2name']}
 
+
 def augment_catalog(outfilename):
-    """calculate deboosting for the two-band catalog and write an output 
+    """calculate deboosting for the two-band catalog and write an output
     shelve to outfilename"""
     input_catalog = sd.load_selfdescribing_numpy(param['catalog_filename'],
                                                  swaps=translate,
@@ -64,13 +66,14 @@ def augment_catalog(outfilename):
     input_catalog[:][param['flux2name']] /= 1000.
     input_catalog[:][param['sigma2name']] /= 1000.
 
-    augmented_catalog = process.process_ptsrc_catalog_alpha(input_catalog, 
+    augmented_catalog = process.process_ptsrc_catalog_alpha(input_catalog,
                                                             param)
 
     # TODO: delete shelve if it already exists
     outputshelve = shelve.open(outfilename)
     outputshelve.update(augmented_catalog)
     outputshelve.close()
+
 
 def compare_catalogs(outfilename, compfilename, septol=1e-3):
     """compare a deboosted catalog with one in literature"""
@@ -85,15 +88,15 @@ def compare_catalogs(outfilename, compfilename, septol=1e-3):
                      augmented_catalog[srcname]["dec"])
         dra = cra - ra
         ddec = cdec - dec
-        delta = np.sqrt(dra*dra + ddec*ddec)
+        delta = np.sqrt(dra * dra + ddec * ddec)
         if (np.min(delta) > septol):
             print "no associated source in comparison catalog for index:" + \
                   repr(srcname)
-            pass
+            break
 
         comp_index = np.where(delta == np.min(delta))[0][0]
         comp_entry = comp_catalog[comp_index]
-        print "-"*80
+        print "-" * 80
         print srcname, comp_index
         print utils.pm_error(augmented_catalog[srcname][param['flux1name'] + "_posterior"] * 1000., "%5.3g")
         print utils.pm_error(augmented_catalog[srcname][param['flux1name'] + "_posterior_swap"] * 1000., "%5.3g")
@@ -111,6 +114,5 @@ def compare_catalogs(outfilename, compfilename, septol=1e-3):
 if __name__ == '__main__':
     output_catalog = "augmented_spt_catalog.shelve"
     #augment_catalog(output_catalog)
-    compare_catalogs(output_catalog, 
-                     "../data/source_table_vieira09_3sigma.dat") 
-    
+    compare_catalogs(output_catalog,
+                     "../data/source_table_vieira09_3sigma.dat")
