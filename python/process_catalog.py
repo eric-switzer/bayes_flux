@@ -145,7 +145,7 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
             augmented_catalog[srcindex]["raw_simple_alpha"] = np.nan
 
         augmented_catalog[srcindex][gp['flux1name'] + "_posterior"] = \
-                                                          posterior[0]
+                                                          np.array(posterior[0])
 
         augmented_catalog[srcindex][gp['flux2name'] + "_posterior"] = \
                                                           posterior[1]
@@ -159,6 +159,9 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
                                                           posterior_swap[1]
 
         augmented_catalog[srcindex]["alpha_posterior_swap"] = posterior_swap[2]
+
+        print posterior[0]
+        print augmented_catalog[srcindex][gp['flux1name'] + "_posterior"]
 
         prefix = "The percentile points of the posterior "
         print prefix + "band 1 flux are [mJy]: " + \
