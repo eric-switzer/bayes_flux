@@ -3,7 +3,7 @@ import numpy as np
 import process_catalog as process
 import self_describing as sd
 import utilities as utils
-import pickle
+import shelve
 
 # SPT deboosting parameters
 # num_X is number of grid points
@@ -67,41 +67,50 @@ def augment_catalog(outfilename):
     augmented_catalog = process.process_ptsrc_catalog_alpha(input_catalog, 
                                                             param)
 
-    outputfile = open(outfilename, 'wb')
-    pickle.dump(augmented_catalog, outputfile)
-    outputfile.close()
+    # TODO: delete shelve if it already exists
+    outputshelve = shelve.open(outfilename)
+    outputshelve.update(augmented_catalog)
+    outputshelve.close()
 
 def compare_catalogs(outfilename, compfilename, septol=1e-3):
     """compare a deboosted catalog with one in literature"""
-    augmented_catalog = pickle.load(open(outfilename, 'r'))
+    augmented_catalog = shelve.open(outfilename)
     comp_catalog = sd.load_selfdescribing_numpy(compfilename,
                                                 swaps=translate,
                                                 verbose=param['verbose'])
 
     (cra, cdec) = (comp_catalog[:]["ra"], comp_catalog[:]["dec"])
-    for srcindex in range(augmented_catalog.shape[0]):
-        (ra, dec) = (augmented_catalog[srcindex]["ra"],
-                     augmented_catalog[srcindex]["dec"])
+    for srcname in augmented_catalog:
+        (ra, dec) = (augmented_catalog[srcname]["ra"],
+                     augmented_catalog[srcname]["dec"])
         dra = cra - ra
         ddec = cdec - dec
         delta = np.sqrt(dra*dra + ddec*ddec)
         if (np.min(delta) > septol):
             print "no associated source in comparison catalog for index:" + \
-                  repr(srcindex)
+                  repr(srcname)
             pass
 
         comp_index = np.where(delta == np.min(delta))[0][0]
         comp_entry = comp_catalog[comp_index]
-        print utils.pm_error(augmented_catalog[srcindex][param['flux1name'] + "_posterior"] * 1000., "%5.3g")
+        print "-"*80
+        print srcname, comp_index
+        print utils.pm_error(augmented_catalog[srcname][param['flux1name'] + "_posterior"] * 1000., "%5.3g")
+        print utils.pm_error(augmented_catalog[srcname][param['flux1name'] + "_posterior_swap"] * 1000., "%5.3g")
         print comp_entry["S_150d"], comp_entry["S_150d_down"], comp_entry["S_150d_up"]
+        print utils.pm_error(augmented_catalog[srcname][param['flux2name'] + "_posterior"] * 1000., "%5.3g")
+        print utils.pm_error(augmented_catalog[srcname][param['flux2name'] + "_posterior_swap"] * 1000., "%5.3g")
+        print comp_entry["S_220d"], comp_entry["S_220d_down"], comp_entry["S_220d_up"]
 
         # do an inefficient search over a published catalog (assuming no common
         # indices exist
 
+    augmented_catalog.close()
+
 
 if __name__ == '__main__':
-    output_catalog = "augmented_spt_catalog.pkl"
-    augment_catalog(output_catalog)
-    #compare_catalogs(output_catalog, 
-    #                 "../data/source_table_vieira09_3sigma.dat") 
+    output_catalog = "augmented_spt_catalog.shelve"
+    #augment_catalog(output_catalog)
+    compare_catalogs(output_catalog, 
+                     "../data/source_table_vieira09_3sigma.dat") 
     

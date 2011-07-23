@@ -21,12 +21,6 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
     print "Starting process_ptsrc_catalog_alpha on " + repr(catalog.size) + \
           " sources with key field name: " + repr(gp['keyfield_name'])
 
-    #print "process_catalog writing catalog to database file: " + \
-    #       gp['catalog_file_out']
-    #print "process_catalog writing resampled fluxes \
-    #       and distributions to database file: " + \
-    #       gp['distributions_file_out']
-
     print "Band1 named " + repr(gp['flux1name']) + " has frequency " + \
            repr(gp['freq1']) + " and 1-sigma error " + repr(gp['sigma1name'])
 
@@ -48,47 +42,6 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
         print "ERROR: input fluxes do not have the same type"
         return None
 
-    # note: this is actually a dictproxy object
-    augmented_fielddtype = dict(fielddtype)
-
-    # each output has nposterior points along the CDF of the posterior
-    nposterior = repr(len(gp['percentiles']))
-    augmented_fielddtype[gp['flux1name'] + "_posterior"] = \
-        (nposterior + flux1type.name, 0)
-
-    augmented_fielddtype[gp['flux2name'] + "_posterior"] = \
-        (nposterior + flux1type.name, 0)
-
-    augmented_fielddtype["alpha_posterior"] = \
-        (nposterior + flux1type.name, 0)
-
-    augmented_fielddtype[gp['flux1name'] + "_posterior_swap"] = \
-        (nposterior + flux1type.name, 0)
-
-    augmented_fielddtype[gp['flux2name'] + "_posterior_swap"] = \
-        (nposterior + flux1type.name, 0)
-
-    augmented_fielddtype["alpha_posterior_swap"] = \
-        (nposterior + flux1type.name, 0)
-
-    # number of drawings and raw simple alpha
-    augmented_fielddtype["numalphadist"] = (flux1type.name, 0)
-    augmented_fielddtype["raw_simple_alpha"] = (flux1type.name, 0)
-    augmented_fielddtype["alpha_probexceed"] = (flux1type.name, 0)
-
-    # make a new numpy array which is augmented to include outputs
-    # and copy input data into this
-    formats = []
-    for name in augmented_fielddtype.keys():
-        formats.append(augmented_fielddtype[name][0])
-
-    augmented_catalog = np.zeros(catalog.size,
-                                 dtype={'names': augmented_fielddtype.keys(),
-                                        'formats': formats})
-
-    for name in fielddtype.keys():
-        augmented_catalog[:][name] = catalog[:][name]
-
     # calculate theory dN/dS
     # TODO: this is really not very generic now
     # frequencies are hard-coded into particular lookup tables
@@ -106,21 +59,24 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
         dnds_tot_linear_band1 = dnds.dnds_total(input_s_linear, "143GHz")
         dnds_tot_linear_band2 = dnds.dnds_total(input_s_linear, "217GHz")
 
+    augmented_catalog = {}
     for srcindex in np.arange(catalog.size):
-        flux1 = augmented_catalog[srcindex][gp['flux1name']]
-        flux2 = augmented_catalog[srcindex][gp['flux2name']]
-        sigma1 = augmented_catalog[srcindex][gp['sigma1name']]
-        sigma2 = augmented_catalog[srcindex][gp['sigma2name']]
-        srcname = augmented_catalog[srcindex][gp['keyfield_name']]
-        ra = augmented_catalog[srcindex]['ra']
-        dec = augmented_catalog[srcindex]['dec']
+        flux1 = catalog[srcindex][gp['flux1name']]
+        flux2 = catalog[srcindex][gp['flux2name']]
+        sigma1 = catalog[srcindex][gp['sigma1name']]
+        sigma2 = catalog[srcindex][gp['sigma2name']]
+        srcname = repr(catalog[srcindex][gp['keyfield_name']])
+        ra = catalog[srcindex]['ra']
+        dec = catalog[srcindex]['dec']
 
         print "-" * 80
-        print "Starting analysis on source %s (# %d), flux1 is [mJy]: \
-               %5.3g +/- %5.3g, flux2 is [mJy]: %5.3g +/- %5.3g ; \
-               RA/dec: %6.4g/%6.4g" \
-                    % (srcname, srcindex, flux1 * 1000., sigma1 * 1000.,
-                       flux2 * 1000., sigma2 * 1000., ra, dec)
+        print "Starting analysis on source %s (# %d), " % \
+                    (srcname, srcindex) + \
+               "flux1 is [mJy]: %5.3g +/- %5.3g, " % \
+                    (flux1 * 1000., sigma1 * 1000.) + \
+               "flux2 is [mJy]: %5.3g +/- %5.3g, " % \
+                    (flux2 * 1000., sigma2 * 1000.) + \
+               "RA/Dec: %6.4g/%6.4g" % (ra, dec)
 
         posterior = two_band_posterior_flux(flux1, flux2, sigma1, sigma2,
                                             input_s_linear,
@@ -134,34 +90,27 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
                                                  dnds_tot_linear_band2, gp,
                                                  swap_flux=True)
 
+        # copy the source data from the input catalog to the output dict
+        source_entry = {}
+        for name in fielddtype.keys():
+            source_entry[name] = catalog[srcindex][name]
+
         # find the spectral index of the raw fluxes between bands
         try:
-            augmented_catalog[srcindex]["raw_simple_alpha"] = \
-            np.log10(flux1 / flux2) / np.log10(gp['freq1'] / gp['freq2'])
-
+            source_entry["raw_simple_alpha"] = \
+                   np.log10(flux1 / flux2) / np.log10(gp['freq1'] / gp['freq2'])
         except FloatingPointError:
-            #print "source " + augmented_catalog[srcindex][keyfield_name] + \
-            #      " had negative flux (noise)"
-            augmented_catalog[srcindex]["raw_simple_alpha"] = np.nan
+            print "source " + srcname + " has no defined raw index (S < 0)"
+            source_entry["raw_simple_alpha"] = np.nan
 
-        augmented_catalog[srcindex][gp['flux1name'] + "_posterior"] = \
-                                                          np.array(posterior[0])
-
-        augmented_catalog[srcindex][gp['flux2name'] + "_posterior"] = \
-                                                          posterior[1]
-
-        augmented_catalog[srcindex]["alpha_posterior"] = posterior[2]
-
-        augmented_catalog[srcindex][gp['flux1name'] + "_posterior_swap"] = \
-                                                          posterior_swap[0]
-
-        augmented_catalog[srcindex][gp['flux2name'] + "_posterior_swap"] = \
-                                                          posterior_swap[1]
-
-        augmented_catalog[srcindex]["alpha_posterior_swap"] = posterior_swap[2]
-
-        print posterior[0]
-        print augmented_catalog[srcindex][gp['flux1name'] + "_posterior"]
+        source_entry[gp['flux1name'] + "_posterior"] = np.array(posterior[0])
+        source_entry[gp['flux2name'] + "_posterior"] = posterior[1]
+        source_entry["alpha_posterior"] = posterior[2]
+        source_entry[gp['flux1name'] + "_posterior_swap"] = posterior_swap[0]
+        source_entry[gp['flux2name'] + "_posterior_swap"] = posterior_swap[1]
+        source_entry["alpha_posterior_swap"] = posterior_swap[2]
+        
+        augmented_catalog[srcname] = source_entry
 
         prefix = "The percentile points of the posterior "
         print prefix + "band 1 flux are [mJy]: " + \
@@ -179,9 +128,6 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
                " swapped detection: " + \
                utils.pm_error(posterior_swap[2], "%5.3g")
 
-    catalog_dict = utils.numpy_recarray_to_dict(augmented_catalog,
-                                                gp['keyfield_name'])
-    utils.store_json(catalog_dict, "catalog_human.dat")
     return augmented_catalog
 
 

@@ -182,7 +182,11 @@ def dnds_to_ngts(s_vector, dnds):
 
 def numpy_recarray_to_dict(data, keyfield_name):
     """convert a numpy structured array to a dictionary
-    (easy to write as JSON)
+    (easy to write as JSON) eg:
+
+    catalog_dict = utils.numpy_recarray_to_dict(augmented_catalog,
+                                                gp['keyfield_name'])
+    utils.store_json(catalog_dict, "catalog_human.dat")
     """
     numrec = data.size
     fielddtype = data.dtype.fields
