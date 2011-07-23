@@ -98,7 +98,7 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
         # find the spectral index of the raw fluxes between bands
         try:
             source_entry["raw_simple_alpha"] = \
-                   np.log10(flux1 / flux2) / np.log10(gp['freq1'] / gp['freq2'])
+                 np.log10(flux1 / flux2) / np.log10(gp['freq1'] / gp['freq2'])
         except FloatingPointError:
             print "source " + srcname + " has no defined raw index (S < 0)"
             source_entry["raw_simple_alpha"] = np.nan
@@ -109,7 +109,7 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
         source_entry[gp['flux1name'] + "_posterior_swap"] = posterior_swap[0]
         source_entry[gp['flux2name'] + "_posterior_swap"] = posterior_swap[1]
         source_entry["alpha_posterior_swap"] = posterior_swap[2]
-        
+
         augmented_catalog[srcname] = source_entry
 
         prefix = "The percentile points of the posterior "
