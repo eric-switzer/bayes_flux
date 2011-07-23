@@ -1,4 +1,4 @@
-"""Load the published SPT point source raw flux catalogs, deboost and compare
+"""Load the published SPT point source raw flux catalogs, deboost and compare.
 """
 import numpy as np
 import process_catalog as process

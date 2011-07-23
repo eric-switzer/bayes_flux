@@ -1,4 +1,4 @@
-"""Process the catalog source-by-source, calling the Bayesian code for each"""
+"""Process the catalog source-by-source, calling the Bayesian code for each."""
 import numpy as np
 import source_count_models as dnds
 import utilities as utils
