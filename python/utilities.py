@@ -129,10 +129,17 @@ def fancy_vector(vector, format_string):
     return output
 
 
+def pm_vector(vector):
+    """convert a vector of e.g. 16, 50 and 84th percentiles into:
+    value (plus) upper error (minus) lower error
+    """
+    return (vector[1], vector[2] - vector[1], vector[1] - vector[0])
+
+
 def pm_error(vector, format_string):
     """print a numpy vector with three entries as central value plus errors"""
-    return (format_string + " +" + format_string + " -" + format_string) % (
-            vector[1], vector[2] - vector[1], vector[1] - vector[0])
+    return (format_string + " +" + format_string + " -" + format_string) % \
+            pm_vector(vector)
 
 
 def loginterpolate(x_vector, y_vector, xout, replace_nan=np.nan):

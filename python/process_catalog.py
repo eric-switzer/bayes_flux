@@ -118,7 +118,7 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
         source_entry[gp['flux2name'] + "_posterior_swap"] = posterior_swap[1]
         source_entry["alpha_posterior_swap"] = posterior_swap[2]
         # assign the posterior flux based on the detection band
-        if (flux1 > flux2):
+        if ((flux1/sigma1) > (flux2/sigma2)):
             source_entry[gp['flux1name'] + "_posterior_det"] = posterior[0]
             source_entry[gp['flux2name'] + "_posterior_det"] = posterior[1]
             source_entry["alpha_posterior_det"] = posterior[2]

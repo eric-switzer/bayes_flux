@@ -14,7 +14,7 @@ param = {
   "percentiles": [0.16, 0.5, 0.84],
   "num_flux": 800,
   "num_alpha": 800,
-  "prior_alpha": [-5., 5.],
+  "prior_alpha": [-3., 5.],
   "range_alpha": [-5., 5.],
   "cov_calibration": [[0.00165700, 0.00129600], [0.00129600, 0.00799300]],
   "freq1": 152.,
@@ -82,7 +82,11 @@ def compare_catalogs(outfilename, compfilename, septol=1e-3):
                                                 swaps=translate,
                                                 verbose=param['verbose'])
 
-    (cra, cdec) = (comp_catalog[:]["ra"], comp_catalog[:]["dec"])
+    (cra, cdec, csnr150, csnr220) = (comp_catalog[:]["ra"],
+                                     comp_catalog[:]["dec"],
+                                     comp_catalog[:]["SNR150"],
+                                     comp_catalog[:]["SNR220"])
+
     for srcname in augmented_catalog:
         entry = augmented_catalog[srcname]
         (ra, dec) = (entry["ra"],
@@ -99,19 +103,27 @@ def compare_catalogs(outfilename, compfilename, septol=1e-3):
         orig = comp_catalog[comp_index]
         fp1 = param['flux1name']
         fp2 = param['flux2name']
-        print "-" * 80
-        print srcname, comp_index, cra[comp_index], ra, cdec[comp_index], dec
-        print utils.pm_error(entry[fp1 + "_posterior_det"] * 1000., "%5.3g")
-        print utils.pm_error(entry[fp1 + "_posterior"] * 1000., "%5.3g")
-        print utils.pm_error(entry[fp1 + "_posterior_swap"] * 1000., "%5.3g")
-        print orig["S_150d"], orig["S_150d_down"], orig["S_150d_up"]
-        print utils.pm_error(entry[fp2 + "_posterior_det"] * 1000., "%5.3g")
-        print utils.pm_error(entry[fp2 + "_posterior"] * 1000., "%5.3g")
-        print utils.pm_error(entry[fp2 + "_posterior_swap"] * 1000., "%5.3g")
-        print orig["S_220d"], orig["S_220d_down"], orig["S_220d_up"]
+        orig_flux1 = np.array([orig["S_150d"],
+                               orig["S_150d_up"],
+                               orig["S_150d_down"]])
 
-        # do an inefficient search over a published catalog (assuming no common
-        # indices exist
+        orig_flux2 = np.array([orig["S_220d"],
+                               orig["S_220d_up"],
+                               orig["S_220d_down"]])
+
+        print "-" * 80
+        # can optionally print "_posterior" and "_posterior_swap" for checking
+        print srcname, comp_index, cra[comp_index], ra, \
+              cdec[comp_index], dec, csnr150[comp_index], csnr220[comp_index]
+        print utils.pm_error(entry[fp1 + "_posterior_det"] * 1000., "%5.3g")
+        print orig_flux1
+        print (np.array(utils.pm_vector(entry[fp1 + "_posterior_det"] * 1000.)) -
+                orig_flux1) / orig_flux1 * 100.
+
+        print utils.pm_error(entry[fp2 + "_posterior_det"] * 1000., "%5.3g")
+        print orig_flux2
+        print (np.array(utils.pm_vector(entry[fp2 + "_posterior_det"] * 1000.)) -
+                orig_flux2) / orig_flux2 * 100.
 
     augmented_catalog.close()
 
