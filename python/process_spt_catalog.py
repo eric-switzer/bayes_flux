@@ -8,16 +8,15 @@ import shelve
 
 # SPT deboosting parameters
 # num_X is number of grid points
-# cov_calbeam is the covariance contribution due to beam
-# and calibration uncertainty plus covariance from background
-# sources (found from simulation)
+# cov_calibration is the fractional covariance contribution due to beam and
+# calibration uncertainty plus covariance from background sources.
 param = {
   "percentiles": [0.16, 0.5, 0.84],
   "num_flux": 800,
   "num_alpha": 800,
   "prior_alpha": [-5., 5.],
   "range_alpha": [-5., 5.],
-  "cov_calbeam": [[0.00165700, 0.00129600], [0.00129600, 0.00799300]],
+  "cov_calibration": [[0.00165700, 0.00129600], [0.00129600, 0.00799300]],
   "freq1": 152.,
   "freq2": 219.5,
   "omega_prior": 1.,
@@ -25,6 +24,7 @@ param = {
   "flux2name": "flux220",
   "sigma1name": "sigma150",
   "sigma2name": "sigma220",
+  "sigma12name": None,
   "keyfield_name": "index",
   #"catalog_filename": "../data/source_catalog_vieira09_3sigma.dat",
   "catalog_filename": "../data/source_catalog_vieira09_first200.dat",
@@ -32,7 +32,7 @@ param = {
   "verbose": True
 }
 
-# suggestions for calculating cov_calbeam for other surveys:
+# suggestions for calculating cov_calibration for other surveys:
 # * use flux recovery simulations to estimate the calibration/beam error
 #    covariance
 #    -- use a set of PSFs drawn from the error model and look at the scatter
@@ -67,10 +67,10 @@ def augment_catalog(outfilename):
     input_catalog[:][param['sigma2name']] /= 1000.
 
     augmented_catalog = process.process_ptsrc_catalog_alpha(input_catalog,
-                                                            param)
+                                                            param,
+                                                        use_spt_model=False)
 
-    # TODO: delete shelve if it already exists
-    outputshelve = shelve.open(outfilename)
+    outputshelve = shelve.open(outfilename, flag="n")
     outputshelve.update(augmented_catalog)
     outputshelve.close()
 
@@ -84,8 +84,9 @@ def compare_catalogs(outfilename, compfilename, septol=1e-3):
 
     (cra, cdec) = (comp_catalog[:]["ra"], comp_catalog[:]["dec"])
     for srcname in augmented_catalog:
-        (ra, dec) = (augmented_catalog[srcname]["ra"],
-                     augmented_catalog[srcname]["dec"])
+        entry = augmented_catalog[srcname]
+        (ra, dec) = (entry["ra"],
+                     entry["dec"])
         dra = cra - ra
         ddec = cdec - dec
         delta = np.sqrt(dra * dra + ddec * ddec)
@@ -95,15 +96,19 @@ def compare_catalogs(outfilename, compfilename, septol=1e-3):
             break
 
         comp_index = np.where(delta == np.min(delta))[0][0]
-        comp_entry = comp_catalog[comp_index]
+        orig = comp_catalog[comp_index]
+        fp1 = param['flux1name']
+        fp2 = param['flux2name']
         print "-" * 80
-        print srcname, comp_index
-        print utils.pm_error(augmented_catalog[srcname][param['flux1name'] + "_posterior"] * 1000., "%5.3g")
-        print utils.pm_error(augmented_catalog[srcname][param['flux1name'] + "_posterior_swap"] * 1000., "%5.3g")
-        print comp_entry["S_150d"], comp_entry["S_150d_down"], comp_entry["S_150d_up"]
-        print utils.pm_error(augmented_catalog[srcname][param['flux2name'] + "_posterior"] * 1000., "%5.3g")
-        print utils.pm_error(augmented_catalog[srcname][param['flux2name'] + "_posterior_swap"] * 1000., "%5.3g")
-        print comp_entry["S_220d"], comp_entry["S_220d_down"], comp_entry["S_220d_up"]
+        print srcname, comp_index, cra[comp_index], ra, cdec[comp_index], dec
+        print utils.pm_error(entry[fp1 + "_posterior_det"] * 1000., "%5.3g")
+        print utils.pm_error(entry[fp1 + "_posterior"] * 1000., "%5.3g")
+        print utils.pm_error(entry[fp1 + "_posterior_swap"] * 1000., "%5.3g")
+        print orig["S_150d"], orig["S_150d_down"], orig["S_150d_up"]
+        print utils.pm_error(entry[fp2 + "_posterior_det"] * 1000., "%5.3g")
+        print utils.pm_error(entry[fp2 + "_posterior"] * 1000., "%5.3g")
+        print utils.pm_error(entry[fp2 + "_posterior_swap"] * 1000., "%5.3g")
+        print orig["S_220d"], orig["S_220d_down"], orig["S_220d_up"]
 
         # do an inefficient search over a published catalog (assuming no common
         # indices exist
@@ -113,6 +118,6 @@ def compare_catalogs(outfilename, compfilename, septol=1e-3):
 
 if __name__ == '__main__':
     output_catalog = "augmented_spt_catalog.shelve"
-    #augment_catalog(output_catalog)
+    augment_catalog(output_catalog)
     compare_catalogs(output_catalog,
                      "../data/source_table_vieira09_3sigma.dat")

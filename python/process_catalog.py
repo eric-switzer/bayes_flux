@@ -63,8 +63,16 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
     for srcindex in np.arange(catalog.size):
         flux1 = catalog[srcindex][gp['flux1name']]
         flux2 = catalog[srcindex][gp['flux2name']]
+
         sigma1 = catalog[srcindex][gp['sigma1name']]
         sigma2 = catalog[srcindex][gp['sigma2name']]
+
+        # if the catalog has off-diagonal covariance for the flux
+        if gp['sigma12name'] != None:
+            sigma12 = catalog[srcindex][gp['sigma12name']]
+        else:
+            sigma12 = 0.
+
         srcname = repr(catalog[srcindex][gp['keyfield_name']])
         ra = catalog[srcindex]['ra']
         dec = catalog[srcindex]['dec']
@@ -79,13 +87,13 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
                "RA/Dec: %6.4g/%6.4g" % (ra, dec)
 
         posterior = two_band_posterior_flux(flux1, flux2, sigma1, sigma2,
-                                            input_s_linear,
+                                            sigma12, input_s_linear,
                                             dnds_tot_linear_band1,
                                             dnds_tot_linear_band2, gp,
                                             swap_flux=False)
 
         posterior_swap = two_band_posterior_flux(flux1, flux2, sigma1, sigma2,
-                                                 input_s_linear,
+                                                 sigma12, input_s_linear,
                                                  dnds_tot_linear_band1,
                                                  dnds_tot_linear_band2, gp,
                                                  swap_flux=True)
@@ -103,12 +111,23 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
             print "source " + srcname + " has no defined raw index (S < 0)"
             source_entry["raw_simple_alpha"] = np.nan
 
-        source_entry[gp['flux1name'] + "_posterior"] = np.array(posterior[0])
+        source_entry[gp['flux1name'] + "_posterior"] = posterior[0]
         source_entry[gp['flux2name'] + "_posterior"] = posterior[1]
         source_entry["alpha_posterior"] = posterior[2]
         source_entry[gp['flux1name'] + "_posterior_swap"] = posterior_swap[0]
         source_entry[gp['flux2name'] + "_posterior_swap"] = posterior_swap[1]
         source_entry["alpha_posterior_swap"] = posterior_swap[2]
+        # assign the posterior flux based on the detection band
+        if (flux1 > flux2):
+            source_entry[gp['flux1name'] + "_posterior_det"] = posterior[0]
+            source_entry[gp['flux2name'] + "_posterior_det"] = posterior[1]
+            source_entry["alpha_posterior_det"] = posterior[2]
+        else:
+            source_entry[gp['flux1name'] + "_posterior_det"] = \
+                                                             posterior_swap[0]
+            source_entry[gp['flux2name'] + "_posterior_det"] = \
+                                                             posterior_swap[1]
+            source_entry["alpha_posterior_det"] = posterior_swap[2]
 
         augmented_catalog[srcname] = source_entry
 
@@ -123,7 +142,7 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
                " swapped detection: " + \
                utils.pm_error(posterior_swap[1] * 1000., "%5.3g")
 
-        print prefix + "spectral index are: " + \
+        print prefix + "spectral indices are: " + \
                utils.pm_error(posterior[2], "%5.3g") + \
                " swapped detection: " + \
                utils.pm_error(posterior_swap[2], "%5.3g")
@@ -131,7 +150,7 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
     return augmented_catalog
 
 
-def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, s_in, dnds1,
+def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
                             dnds2, gp, swap_flux=False):
     '''
     A wrapper to two band posterior flux methods which returns the
@@ -164,6 +183,8 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, s_in, dnds1,
     cov_noise_jy = np.zeros((2, 2))
     cov_noise_jy[0, 0] = sigma1 ** 2.
     cov_noise_jy[1, 1] = sigma2 ** 2.
+    cov_noise_jy[0, 1] = sigma12 ** 2.
+    cov_noise_jy[1, 0] = cov_noise_jy[0, 1]
 
     # convert the fractional beam/cal covariance to a flux covariance
     fluxes = np.array([flux1, flux2])
@@ -171,24 +192,27 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, s_in, dnds1,
     fluxvec = (np.arange(0, gp['num_flux']) + 0.5) / float(gp['num_flux']) * \
               1.5 * max(fluxes)
 
-    # total covariance in units of Jy^2
-    corr_calbeam = utils.cov_to_corr(gp['cov_calbeam'])
-    cov_calbeam_jy = (np.outer(fluxes, fluxes)) * gp['cov_calbeam']
+    # if given, convert the fractional calibration error into Jy^2
+    if (gp['cov_calibration'] != None):
+        corr_calibration = utils.cov_to_corr(gp['cov_calibration'])
+        cov_calibration_jy = (np.outer(fluxes, fluxes)) * gp['cov_calibration']
 
-    cov_calbeam_jy[1, 0] = np.sqrt(cov_calbeam_jy[0, 0] * \
-                           cov_calbeam_jy[1, 1]) * corr_calbeam[1, 0]
+        cov_calibration_jy[1, 0] = np.sqrt(cov_calibration_jy[0, 0] * \
+                            cov_calibration_jy[1, 1]) * corr_calibration[1, 0]
 
-    cov_calbeam_jy[0, 1] = cov_calbeam_jy[1, 0]
+        cov_calibration_jy[0, 1] = cov_calibration_jy[1, 0]
+    else:
+        cov_calibration_jy = np.zeros((2, 2))
 
     if gp['neglect_calerror']:
         print "Important: ignoring calibration error"
         total_covariance = cov_noise_jy
     else:
-        total_covariance = cov_noise_jy + cov_calbeam_jy
+        total_covariance = cov_noise_jy + cov_calibration_jy
 
     if gp['verbose']:
         print "joint code using noise covariance:" + repr(cov_noise_jy)
-        print "joint code using cal covariance:" + repr(cov_calbeam_jy)
+        print "joint code using cal covariance:" + repr(cov_calibration_jy)
         print "joint code using covariance:" + repr(total_covariance)
 
     # TODO: is this the correct ordering? seems swapped
