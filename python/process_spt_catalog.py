@@ -12,7 +12,7 @@ import shelve
 # calibration uncertainty plus covariance from background sources.
 param = {
   "percentiles": [0.16, 0.5, 0.84],
-  "num_flux": 800,
+  "num_flux": 800,  # 800 seems like reasonable binning, 2000 fine
   "num_alpha": 800,
   "prior_alpha": [-3., 5.],
   "range_alpha": [-5., 5.],
@@ -20,6 +20,7 @@ param = {
   "freq1": 152.,
   "freq2": 219.5,
   "omega_prior": 1.,
+  "spectral_threshold": 1.66,
   "flux1name": "flux150",
   "flux2name": "flux220",
   "sigma1name": "sigma150",
@@ -68,7 +69,7 @@ def augment_catalog(outfilename):
 
     augmented_catalog = process.process_ptsrc_catalog_alpha(input_catalog,
                                                             param,
-                                                        use_spt_model=True)
+                                                        use_spt_model=False)
 
     outputshelve = shelve.open(outfilename, flag="n")
     outputshelve.update(augmented_catalog)
@@ -121,26 +122,36 @@ def compare_catalogs(outfilename, compfilename, septol=1e-3):
         print srcname, comp_index, cra[comp_index], ra, \
               cdec[comp_index], dec, minsep, \
               csnr150[comp_index], csnr220[comp_index]
+
+        print "S1" + "-" * 60
         print utils.pm_error(entry[fp1 + "_posterior_det"] * 1000., "%5.3g")
         print orig_flux1
-        print (np.array(utils.pm_vector(entry[fp1 + "_posterior_det"] * 1000.)) -
-                orig_flux1) / orig_flux1 * 100.
+        if (np.all(orig_flux1 > 0)):
+            print (np.array(utils.pm_vector(entry[fp1 + "_posterior_det"] * \
+                    1000.)) - orig_flux1) / orig_flux1 * 100.
 
+        print "S2" + "-" * 60
         print utils.pm_error(entry[fp2 + "_posterior_det"] * 1000., "%5.3g")
         print orig_flux2
-        print (np.array(utils.pm_vector(entry[fp2 + "_posterior_det"] * 1000.)) -
-                orig_flux2) / orig_flux2 * 100.
+        if (np.all(orig_flux2 > 0)):
+            print (np.array(utils.pm_vector(entry[fp2 + "_posterior_det"] * \
+                    1000.)) - orig_flux2) / orig_flux2 * 100.
 
+        print "ind" + "-" * 69
         print utils.pm_error(entry["alpha_posterior"], "%5.3g")
         print orig_alpha
-        print (np.array(utils.pm_vector(entry["alpha_posterior"])) -
-                orig_alpha) / orig_alpha * 100.
+        if (np.all(orig_alpha > 0)):
+            print (np.array(utils.pm_vector(entry["alpha_posterior"])) -
+                  orig_alpha) / orig_alpha * 100.
+
+        print "P(a>t) new: " + repr(entry["prob_exceed_det"]) + \
+              " old: " + repr(orig["palphagt1"])
 
     augmented_catalog.close()
 
 
 if __name__ == '__main__':
-    output_catalog = "augmented_spt_catalog_S1alpha.shelve"
-    #augment_catalog(output_catalog)
+    output_catalog = "augmented_spt_catalog.shelve"
+    augment_catalog(output_catalog)
     compare_catalogs(output_catalog,
                      "../data/source_table_vieira09_3sigma.dat")

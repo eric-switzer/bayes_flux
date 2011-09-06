@@ -6,9 +6,9 @@ output formatting.
 
 import os
 import numpy as np
+from scipy import integrate
 from scipy import interpolate
 import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import json
 import pyfits
 
@@ -62,6 +62,7 @@ def compare_matrices(matrix1, matrix2, logplot=False):
 
     # first subplot
     subplot1 = fig.add_subplot(121)
+    from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
     axins1 = inset_axes(subplot1,
                         width="50%",
@@ -118,6 +119,19 @@ def percentile_points(axis, pdf, percentiles):
         cdf_points[index] = np.nanmin(axis[cdf >= percentile])
 
     return cdf_points
+
+
+# TODO: test this more
+def fraction_exceeds(vector, threshold):
+    """Find the fraction of vector that exceeds some threshold"""
+    return float(len(np.where(vector > threshold)[0]))/float(len(vector))
+
+
+def prob_exceed(axis, probability, threshold):
+    """given x and P(x), find P(x>t)"""
+    exceeding = np.where(axis > threshold)
+    integral = integrate.simps(probability[exceeding], axis[exceeding])
+    return integral/integrate.simps(probability, axis)
 
 
 # TODO: remove trailing space

@@ -114,20 +114,24 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
         source_entry[gp['flux1name'] + "_posterior"] = posterior[0]
         source_entry[gp['flux2name'] + "_posterior"] = posterior[1]
         source_entry["alpha_posterior"] = posterior[2]
+        source_entry["prob_exceed"] = posterior[3]
         source_entry[gp['flux1name'] + "_posterior_swap"] = posterior_swap[0]
         source_entry[gp['flux2name'] + "_posterior_swap"] = posterior_swap[1]
         source_entry["alpha_posterior_swap"] = posterior_swap[2]
+        source_entry["prob_exceed_swap"] = posterior_swap[3]
         # assign the posterior flux based on the detection band
         if ((flux1/sigma1) > (flux2/sigma2)):
             source_entry[gp['flux1name'] + "_posterior_det"] = posterior[0]
             source_entry[gp['flux2name'] + "_posterior_det"] = posterior[1]
             source_entry["alpha_posterior_det"] = posterior[2]
+            source_entry["prob_exceed_det"] = posterior[3]
         else:
             source_entry[gp['flux1name'] + "_posterior_det"] = \
                                                              posterior_swap[0]
             source_entry[gp['flux2name'] + "_posterior_det"] = \
                                                              posterior_swap[1]
             source_entry["alpha_posterior_det"] = posterior_swap[2]
+            source_entry["prob_exceed_det"] = posterior_swap[3]
 
         augmented_catalog[srcname] = source_entry
 
@@ -146,6 +150,10 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
                utils.pm_error(posterior[2], "%5.3g") + \
                " swapped detection: " + \
                utils.pm_error(posterior_swap[2], "%5.3g")
+
+        print prefix + "probability that the index exceeds " + \
+               repr(gp['spectral_threshold']) + ": "+ repr(posterior[3]) + \
+               " swapped detection: " + repr(posterior_swap[3])
 
     return augmented_catalog
 
@@ -250,8 +258,8 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
                                                          alpha_prior)
 
         alpha_dist = np.sum(posterior_fluxindex, axis=0)
-        flux1_dist = np.sum(posterior_fluxindex, axis=1)
-        #flux1_dist = np.sum(posterior_fluxflux, axis=1)
+        #flux1_dist = np.sum(posterior_fluxindex, axis=1)
+        flux1_dist = np.sum(posterior_fluxflux, axis=1)
         flux2_dist = np.sum(posterior_fluxflux, axis=0)
 
     # calculate the summaries of the various output PDFs
@@ -264,4 +272,7 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
     alpha_percentiles = utils.percentile_points(alphavec, alpha_dist,
                                                 gp['percentiles'])
 
-    return (flux1_percentiles, flux2_percentiles, alpha_percentiles)
+    probexceed = utils.prob_exceed(alphavec, alpha_dist,
+                                   gp['spectral_threshold'])
+
+    return (flux1_percentiles, flux2_percentiles, alpha_percentiles, probexceed)
