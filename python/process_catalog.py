@@ -250,7 +250,8 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
                                                          alpha_prior)
 
         alpha_dist = np.sum(posterior_fluxindex, axis=0)
-        flux1_dist = np.sum(posterior_fluxflux, axis=1)
+        flux1_dist = np.sum(posterior_fluxindex, axis=1)
+        #flux1_dist = np.sum(posterior_fluxflux, axis=1)
         flux2_dist = np.sum(posterior_fluxflux, axis=0)
 
     # calculate the summaries of the various output PDFs

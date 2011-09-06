@@ -68,7 +68,7 @@ def augment_catalog(outfilename):
 
     augmented_catalog = process.process_ptsrc_catalog_alpha(input_catalog,
                                                             param,
-                                                        use_spt_model=False)
+                                                        use_spt_model=True)
 
     outputshelve = shelve.open(outfilename, flag="n")
     outputshelve.update(augmented_catalog)
@@ -94,12 +94,13 @@ def compare_catalogs(outfilename, compfilename, septol=1e-3):
         dra = cra - ra
         ddec = cdec - dec
         delta = np.sqrt(dra * dra + ddec * ddec)
+        minsep = np.min(delta)
         if (np.min(delta) > septol):
             print "no associated source in comparison catalog for index:" + \
                   repr(srcname)
             break
 
-        comp_index = np.where(delta == np.min(delta))[0][0]
+        comp_index = np.where(delta == minsep)[0][0]
         orig = comp_catalog[comp_index]
         fp1 = param['flux1name']
         fp2 = param['flux2name']
@@ -111,10 +112,15 @@ def compare_catalogs(outfilename, compfilename, septol=1e-3):
                                orig["S_220d_up"],
                                orig["S_220d_down"]])
 
+        orig_alpha = np.array([orig["d_alpha"],
+                               orig["d_alpha_up"],
+                               orig["d_alpha_down"]])
+
         print "-" * 80
         # can optionally print "_posterior" and "_posterior_swap" for checking
         print srcname, comp_index, cra[comp_index], ra, \
-              cdec[comp_index], dec, csnr150[comp_index], csnr220[comp_index]
+              cdec[comp_index], dec, minsep, \
+              csnr150[comp_index], csnr220[comp_index]
         print utils.pm_error(entry[fp1 + "_posterior_det"] * 1000., "%5.3g")
         print orig_flux1
         print (np.array(utils.pm_vector(entry[fp1 + "_posterior_det"] * 1000.)) -
@@ -125,11 +131,16 @@ def compare_catalogs(outfilename, compfilename, septol=1e-3):
         print (np.array(utils.pm_vector(entry[fp2 + "_posterior_det"] * 1000.)) -
                 orig_flux2) / orig_flux2 * 100.
 
+        print utils.pm_error(entry["alpha_posterior"], "%5.3g")
+        print orig_alpha
+        print (np.array(utils.pm_vector(entry["alpha_posterior"])) -
+                orig_alpha) / orig_alpha * 100.
+
     augmented_catalog.close()
 
 
 if __name__ == '__main__':
-    output_catalog = "augmented_spt_catalog.shelve"
-    augment_catalog(output_catalog)
+    output_catalog = "augmented_spt_catalog_S1alpha.shelve"
+    #augment_catalog(output_catalog)
     compare_catalogs(output_catalog,
                      "../data/source_table_vieira09_3sigma.dat")

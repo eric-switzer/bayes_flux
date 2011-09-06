@@ -120,6 +120,7 @@ def percentile_points(axis, pdf, percentiles):
     return cdf_points
 
 
+# TODO: remove trailing space
 def fancy_vector(vector, format_string):
     """print a numpy vector with a format string"""
     output = ""
