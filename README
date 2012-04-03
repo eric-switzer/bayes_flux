@@ -32,16 +32,21 @@ In addition to the main code, cite counts models used in the prior:
 Title: Radio and millimeter continuum surveys and their astrophysical implications
 Authors: de Zotti, Gianfranco; Massardi, Marcella; Negrello, Mattia; Wall, Jasper
 Publication: The Astronomy and Astrophysics Review, Volume 18, Issue 1-2, pp. 1-65, 2/2010
-ADS Bibliographic Code:	2010A&ARv..18....1D
+ADS Bibliographic Code: 2010A&ARv..18....1D
 Website: http://web.oapd.inaf.it/rstools/srccnt/srccnt_tables.html
 
 Title: Modeling the evolution of infrared galaxies: a parametric backward evolution model
 Authors: Béthermin, M.; Dole, H.; Lagache, G.; Le Borgne, D.; Penin, A.
 Publication: Astronomy & Astrophysics, Volume 529, id.A4, 5/2011
-ADS Bibliographic Code:	2011A&A...529A...4B
+ADS Bibliographic Code: 2011A&A...529A...4B
 Website: http://www.ias.u-psud.fr/irgalaxies/model.php
 
 Note that the counts models here do not coincide with those used in the prior of SPT source catalog paper, Vieira 2009 (which were private communications and need to be cleared for publication with the code), so the deboosted fluxes will be a little different, especially at low flux.
+
+Suggestions for calculating cov_calibration for other surveys:
+--------------------------------------------------------------
+* Use flux recovery simulations to estimate the calibration/beam error covariance. (a set of PSFs drawn from the error model implies scatter in flux; can do in Fourier/multipole space)
+* Find the covariance of background fluctuations by applying the matched finding/photometry filter, and calculating the covariance between bands. The map could either be: 1) an empirical noise estimate (e.g. difference map) + CMB etc. realization + source realization up to the threshold, 2) the real map with sources removed down to the threshold.
 
 Major TODOs of the current code and wish list:
 ----------------------------------------------
@@ -49,9 +54,9 @@ Major TODOs of the current code and wish list:
 * Write some generic code to read the IR and radio source count models: given name and freq find closest band and transform the counts if necessary
 * Add http://cmbr.phas.ubc.ca/model/, and other counts models cited on http://www.ias.u-psud.fr/irgalaxies/model.php
 * Code to plot/compare counts models
-* Code to simulate surveys under basic noise and source population assumptions 
+* Code to simulate surveys under basic noise and source population assumptions
 * Write unit tests for the major functions
 
 Authors (software):
 -------------------
-The original internal collaboration code was written by T. Crawford and E. Switzer, and the refactoring into python here is by E. Switzer. 
+The original internal collaboration code was written by T. Crawford and E. Switzer, and the refactoring into python here is by E. Switzer.

@@ -9,8 +9,34 @@ import numpy as np
 from scipy import integrate
 from scipy import interpolate
 import matplotlib.pyplot as plt
+import ConfigParser
 import json
 import pyfits
+import ast
+
+
+def iniparse(filename, flat=True):
+    r"""Note that this calls literal_eval. If this fails, just use the string
+    """
+    config = ConfigParser.RawConfigParser()
+    config.read(filename)
+
+    params = {}
+    for section in config.sections():
+        if not flat:
+            params[section] = {}
+        for key, value in config.items(section):
+            try:
+                eval_val = ast.literal_eval(value)
+            except (SyntaxError, ValueError):
+                eval_val = value
+
+            if flat:
+                params[key] = eval_val
+            else:
+                params[section][key] = eval_val
+
+    return params
 
 
 def load_fits_primary(filename, transpose=True):

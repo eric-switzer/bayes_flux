@@ -1,20 +1,50 @@
 """Process the catalog source-by-source, calling the Bayesian code for each."""
 import numpy as np
+import self_describing as sd
 import source_count_models as dnds
 import utilities as utils
 import bayesian_flux
+import two_band_posterior_flux as tbpf
+from optparse import OptionParser
 
 
-def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
+def wrap_process_ptsrc_catalog_alpha(inifile):
+    gp = utils.iniparse(inifile, flat=True)
+
+    translate = {'ID': gp['keyfield_name'],
+                 'S_150': gp['flux1name'],
+                 'noise_150': gp['sigma1name'],
+                 'S_220': gp['flux2name'],
+                 'noise_220': gp['sigma2name']}
+
+    catalog = sd.load_selfdescribing_numpy(gp['catalog_filename'],
+                                           swaps=translate,
+                                           verbose=gp['verbose'])
+
+    process_ptsrc_catalog_alpha(catalog, gp, translate)
+
+    outputshelve = shelve.open(outfilename, flag="n")
+    outputshelve.update(augmented_catalog)
+    outputshelve.close()
+
+
+def process_ptsrc_catalog_alpha(catalog, gp, translate):
     '''
     gp is the dictionary of global parameters
-    use_spt_model is an internal test flag to use the same counts model as in
+    gp['use_spt_model'] is an internal test flag to use the same counts model as in
     the SPT source release; distributed version uses source_count_models
     '''
     # handle all errors as exceptions
     np.seterr(all='raise', divide='raise',
               over='raise', under='raise',
               invalid='raise')
+
+    # convert flux150, sigma150, flux220, sigma220 from mJy to Jy
+    if gp['catalog_in_mjy']:
+        catalog[:][gp['flux1name']] /= 1000.
+        catalog[:][gp['sigma1name']] /= 1000.
+        catalog[:][gp['flux2name']] /= 1000.
+        catalog[:][gp['sigma2name']] /= 1000.
 
     fielddtype = catalog.dtype.fields
 
@@ -47,7 +77,7 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
     # frequencies are hard-coded into particular lookup tables
     # TODO: why let this extend beyond the log-stepped axis (1.)?
     input_s_linear = np.linspace(1.e-8, 1.5, 1e5, endpoint=False)
-    if use_spt_model:
+    if gp['use_spt_model']:
         import spt_source_count_models as sptdnds
 
         dnds_tot_linear_band1 = sptdnds.\
@@ -86,17 +116,19 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
                     (flux2 * 1000., sigma2 * 1000.) + \
                "RA/Dec: %6.4g/%6.4g" % (ra, dec)
 
-        posterior = two_band_posterior_flux(flux1, flux2, sigma1, sigma2,
-                                            sigma12, input_s_linear,
-                                            dnds_tot_linear_band1,
-                                            dnds_tot_linear_band2, gp,
-                                            swap_flux=False)
-
-        posterior_swap = two_band_posterior_flux(flux1, flux2, sigma1, sigma2,
+        posterior = tbpf.two_band_posterior_flux(flux1, flux2,
+                                                 sigma1, sigma2,
                                                  sigma12, input_s_linear,
                                                  dnds_tot_linear_band1,
-                                                 dnds_tot_linear_band2, gp,
-                                                 swap_flux=True)
+                                                 dnds_tot_linear_band2,
+                                                 gp, swap_flux=False)
+
+        posterior_swap = tbpf.two_band_posterior_flux(flux1, flux2,
+                                                      sigma1, sigma2,
+                                                      sigma12, input_s_linear,
+                                                      dnds_tot_linear_band1,
+                                                      dnds_tot_linear_band2,
+                                                      gp, swap_flux=True)
 
         # copy the source data from the input catalog to the output dict
         source_entry = {}
@@ -158,121 +190,32 @@ def process_ptsrc_catalog_alpha(catalog, gp, use_spt_model=False):
     return augmented_catalog
 
 
-def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
-                            dnds2, gp, swap_flux=False):
-    '''
-    A wrapper to two band posterior flux methods which returns the
-    marginalized S_1, S_2 and alpha distributions flux and sigma for each
-    band are required inputs.
-    inputs:
-        --flux and errors (1-sigma) in bands 1 and 2
-        --flux vector and source counts vector to assume
-        --gp is the global list of parameters to run with
-        --swap_flux sets 2 to be the detection band; default is band 1
-    '''
-    bands = np.array([gp['freq1'], gp['freq2']])
+def main():
+    parser = OptionParser(usage="usage: %prog [options] filename",
+                          version="%prog 1.0")
 
-    # make the alpha prior grid
-    if gp['verbose']:
-        print "two_band_posterior_flux using alpha prior: " + \
-             repr(gp['prior_alpha'])
+    parser.add_option("-c", "--compare",
+                      action="store_true",
+                      dest="compareflag",
+                      default=False,
+                      help="Compare with a published catalog")
 
-    prior_alpha_total_range = gp['range_alpha']
-    alpha_prior_range = gp['prior_alpha']
-    alphavec = np.linspace(prior_alpha_total_range[0],
-                           prior_alpha_total_range[1],
-                           gp['num_alpha'], endpoint=False)
-    alpha_prior = np.zeros(gp['num_alpha'])
-    # now set the prior to be flat over that range
-    alpha_prior[np.logical_and(alphavec >= alpha_prior_range[0],
-                               alphavec <= alpha_prior_range[1])] = 1.
+    #parser.add_option("-c", "--compare",
+    #                  action="store",
+    #                  dest="compareini",
+    #                  default=None,
+    #                  help=".ini file describing a comparison catalog")
 
-    # uncorrelated noise in each band (in Jy)
-    cov_noise_jy = np.zeros((2, 2))
-    cov_noise_jy[0, 0] = sigma1 ** 2.
-    cov_noise_jy[1, 1] = sigma2 ** 2.
-    cov_noise_jy[0, 1] = sigma12 ** 2.
-    cov_noise_jy[1, 0] = cov_noise_jy[0, 1]
+    (options, args) = parser.parse_args()
 
-    # convert the fractional beam/cal covariance to a flux covariance
-    fluxes = np.array([flux1, flux2])
+    if len(args) != 1:
+        parser.error("wrong number of arguments")
 
-    fluxvec = (np.arange(0, gp['num_flux']) + 0.5) / float(gp['num_flux']) * \
-              1.5 * max(fluxes)
+    print options
+    print args
 
-    # if given, convert the fractional calibration error into Jy^2
-    if (gp['cov_calibration'] != None):
-        corr_calibration = utils.cov_to_corr(gp['cov_calibration'])
-        cov_calibration_jy = (np.outer(fluxes, fluxes)) * gp['cov_calibration']
+    wrap_process_ptsrc_catalog_alpha(args[0])
 
-        cov_calibration_jy[1, 0] = np.sqrt(cov_calibration_jy[0, 0] * \
-                            cov_calibration_jy[1, 1]) * corr_calibration[1, 0]
+if __name__ == '__main__':
+    main()
 
-        cov_calibration_jy[0, 1] = cov_calibration_jy[1, 0]
-    else:
-        cov_calibration_jy = np.zeros((2, 2))
-
-    if gp['neglect_calerror']:
-        print "Important: ignoring calibration error"
-        total_covariance = cov_noise_jy
-    else:
-        total_covariance = cov_noise_jy + cov_calibration_jy
-
-    if gp['verbose']:
-        print "joint code using noise covariance:" + repr(cov_noise_jy)
-        print "joint code using cal covariance:" + repr(cov_calibration_jy)
-        print "joint code using covariance:" + repr(total_covariance)
-
-    # TODO: is this the correct ordering? seems swapped
-    # TODO: make this more elegant!
-    if swap_flux:
-        if gp['verbose']:
-            print "running band-2 selected source case (swapped)"
-        total_covariance_swap = np.zeros((2, 2))
-        total_covariance_swap[0, 0] = total_covariance[1, 1]
-        total_covariance_swap[1, 1] = total_covariance[0, 0]
-
-        (posterior_fluxindex, posterior_fluxflux) = bayesian_flux.\
-                              posterior_twoband_gaussian(flux2, flux1,
-                                                         total_covariance_swap,
-                                                         bands[::-1], fluxvec,
-                                                         alphavec, s_in, dnds2,
-                                                         gp['omega_prior'],
-                                                         alpha_prior)
-
-        alpha_dist = np.sum(posterior_fluxindex, axis=0)
-        #alpha_dist = np.sum(posterior_fluxindex, axis=1)
-        flux1_dist = np.sum(posterior_fluxflux, axis=0)
-        flux2_dist = np.sum(posterior_fluxflux, axis=1)
-    else:
-        if gp['verbose']:
-            print "running band-1 selected source case"
-
-        (posterior_fluxindex, posterior_fluxflux) = bayesian_flux.\
-                              posterior_twoband_gaussian(flux1, flux2,
-                                                         total_covariance,
-                                                         bands, fluxvec,
-                                                         alphavec, s_in,
-                                                         dnds1,
-                                                         gp['omega_prior'],
-                                                         alpha_prior)
-
-        alpha_dist = np.sum(posterior_fluxindex, axis=0)
-        #flux1_dist = np.sum(posterior_fluxindex, axis=1)
-        flux1_dist = np.sum(posterior_fluxflux, axis=1)
-        flux2_dist = np.sum(posterior_fluxflux, axis=0)
-
-    # calculate the summaries of the various output PDFs
-    flux1_percentiles = utils.percentile_points(fluxvec, flux1_dist,
-                                                gp['percentiles'])
-
-    flux2_percentiles = utils.percentile_points(fluxvec, flux2_dist,
-                                                gp['percentiles'])
-
-    alpha_percentiles = utils.percentile_points(alphavec, alpha_dist,
-                                                gp['percentiles'])
-
-    probexceed = utils.prob_exceed(alphavec, alpha_dist,
-                                   gp['spectral_threshold'])
-
-    return (flux1_percentiles, flux2_percentiles, alpha_percentiles, probexceed)
