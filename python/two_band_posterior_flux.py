@@ -1,10 +1,6 @@
+r"""Calculate the two-band posterior flux"""
 import numpy as np
-import self_describing as sd
-import source_count_models as dnds
 import utilities as utils
-import bayesian_flux
-import two_band_posterior_flux as tbpf
-from optparse import OptionParser
 from scipy import interpolate
 from numpy import linalg as la
 
@@ -126,7 +122,8 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
     probexceed = utils.prob_exceed(alphavec, alpha_dist,
                                    gp['spectral_threshold'])
 
-    return (flux1_percentiles, flux2_percentiles, alpha_percentiles, probexceed)
+    return (flux1_percentiles, flux2_percentiles, \
+            alpha_percentiles, probexceed)
 
 
 # TODO: optionally pass P(S_max) instead of deriving it internally from dN/dS
@@ -283,4 +280,3 @@ def posterior_twoband_gaussian(s_measured1, s_measured2,
         quit()
 
     return (posterior_fluxindex, posterior_fluxflux)
-

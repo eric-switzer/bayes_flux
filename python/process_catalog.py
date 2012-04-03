@@ -1,39 +1,16 @@
 """Process the catalog source-by-source, calling the Bayesian code for each."""
 import numpy as np
-import self_describing as sd
 import source_count_models as dnds
 import utilities as utils
-import bayesian_flux
 import two_band_posterior_flux as tbpf
-from optparse import OptionParser
 
 
-def wrap_process_ptsrc_catalog_alpha(inifile):
-    gp = utils.iniparse(inifile, flat=True)
-
-    translate = {'ID': gp['keyfield_name'],
-                 'S_150': gp['flux1name'],
-                 'noise_150': gp['sigma1name'],
-                 'S_220': gp['flux2name'],
-                 'noise_220': gp['sigma2name']}
-
-    catalog = sd.load_selfdescribing_numpy(gp['catalog_filename'],
-                                           swaps=translate,
-                                           verbose=gp['verbose'])
-
-    process_ptsrc_catalog_alpha(catalog, gp, translate)
-
-    outputshelve = shelve.open(outfilename, flag="n")
-    outputshelve.update(augmented_catalog)
-    outputshelve.close()
-
-
-def process_ptsrc_catalog_alpha(catalog, gp, translate):
-    '''
+def process_ptsrc_catalog_alpha(catalog, gp):
+    r"""
     gp is the dictionary of global parameters
-    gp['use_spt_model'] is an internal test flag to use the same counts model as in
-    the SPT source release; distributed version uses source_count_models
-    '''
+    gp['use_spt_model'] is an internal test flag to use the same counts model
+    as in the SPT source release; distributed version uses source_count_models
+    """
     # handle all errors as exceptions
     np.seterr(all='raise', divide='raise',
               over='raise', under='raise',
@@ -152,7 +129,7 @@ def process_ptsrc_catalog_alpha(catalog, gp, translate):
         source_entry["alpha_posterior_swap"] = posterior_swap[2]
         source_entry["prob_exceed_swap"] = posterior_swap[3]
         # assign the posterior flux based on the detection band
-        if ((flux1/sigma1) > (flux2/sigma2)):
+        if ((flux1 / sigma1) > (flux2 / sigma2)):
             source_entry[gp['flux1name'] + "_posterior_det"] = posterior[0]
             source_entry[gp['flux2name'] + "_posterior_det"] = posterior[1]
             source_entry["alpha_posterior_det"] = posterior[2]
@@ -184,38 +161,7 @@ def process_ptsrc_catalog_alpha(catalog, gp, translate):
                utils.pm_error(posterior_swap[2], "%5.3g")
 
         print prefix + "probability that the index exceeds " + \
-               repr(gp['spectral_threshold']) + ": "+ repr(posterior[3]) + \
+               repr(gp['spectral_threshold']) + ": " + repr(posterior[3]) + \
                " swapped detection: " + repr(posterior_swap[3])
 
     return augmented_catalog
-
-
-def main():
-    parser = OptionParser(usage="usage: %prog [options] filename",
-                          version="%prog 1.0")
-
-    parser.add_option("-c", "--compare",
-                      action="store_true",
-                      dest="compareflag",
-                      default=False,
-                      help="Compare with a published catalog")
-
-    #parser.add_option("-c", "--compare",
-    #                  action="store",
-    #                  dest="compareini",
-    #                  default=None,
-    #                  help=".ini file describing a comparison catalog")
-
-    (options, args) = parser.parse_args()
-
-    if len(args) != 1:
-        parser.error("wrong number of arguments")
-
-    print options
-    print args
-
-    wrap_process_ptsrc_catalog_alpha(args[0])
-
-if __name__ == '__main__':
-    main()
-

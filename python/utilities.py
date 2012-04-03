@@ -150,14 +150,14 @@ def percentile_points(axis, pdf, percentiles):
 # TODO: test this more
 def fraction_exceeds(vector, threshold):
     """Find the fraction of vector that exceeds some threshold"""
-    return float(len(np.where(vector > threshold)[0]))/float(len(vector))
+    return float(len(np.where(vector > threshold)[0])) / float(len(vector))
 
 
 def prob_exceed(axis, probability, threshold):
     """given x and P(x), find P(x>t)"""
     exceeding = np.where(axis > threshold)
     integral = integrate.simps(probability[exceeding], axis[exceeding])
-    return integral/integrate.simps(probability, axis)
+    return integral / integrate.simps(probability, axis)
 
 
 # TODO: remove trailing space
