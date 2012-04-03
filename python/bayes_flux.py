@@ -23,7 +23,7 @@ def wrap_process_catalog(inifile):
                                            verbose=params['verbose'])
 
     augmented_catalog = process_catalog.process_ptsrc_catalog_alpha(
-                                                    catalog, params, translate)
+                                                    catalog, params)
 
     outputshelve = shelve.open(params['augmented_catalog'], flag="n")
     outputshelve.update(augmented_catalog)
