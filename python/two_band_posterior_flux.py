@@ -17,7 +17,7 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
         --gp is the global list of parameters to run with
         --swap_flux sets 2 to be the detection band; default is band 1
     '''
-    bands = np.array([gp['freq1'], gp['freq2']])
+    freq_bands = np.array([gp['freq1'], gp['freq2']])
 
     # make the alpha prior grid
     if gp['verbose']:
@@ -26,13 +26,13 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
 
     prior_alpha_total_range = gp['range_alpha']
     alpha_prior_range = gp['prior_alpha']
-    alphavec = np.linspace(prior_alpha_total_range[0],
+    alpha_axis = np.linspace(prior_alpha_total_range[0],
                            prior_alpha_total_range[1],
                            gp['num_alpha'], endpoint=False)
     alpha_prior = np.zeros(gp['num_alpha'])
     # now set the prior to be flat over that range
-    alpha_prior[np.logical_and(alphavec >= alpha_prior_range[0],
-                               alphavec <= alpha_prior_range[1])] = 1.
+    alpha_prior[np.logical_and(alpha_axis >= alpha_prior_range[0],
+                               alpha_axis <= alpha_prior_range[1])] = 1.
 
     # uncorrelated noise in each band (in Jy)
     cov_noise_jy = np.zeros((2, 2))
@@ -44,8 +44,8 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
     # convert the fractional beam/cal covariance to a flux covariance
     fluxes = np.array([flux1, flux2])
 
-    fluxvec = (np.arange(0, gp['num_flux']) + 0.5) / float(gp['num_flux']) * \
-              1.5 * max(fluxes)
+    flux_axis = (np.arange(0, gp['num_flux']) + 0.5)
+    flux_axis *= 1. / float(gp['num_flux']) * 1.5 * max(fluxes)
 
     # if given, convert the fractional calibration error into Jy^2
     if (gp['cov_calibration'] != None):
@@ -82,8 +82,10 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
         (posterior_fluxindex, posterior_fluxflux) = \
                               posterior_twoband_gaussian(flux2, flux1,
                                                          total_covariance_swap,
-                                                         bands[::-1], fluxvec,
-                                                         alphavec, s_in, dnds2,
+                                                         freq_bands[::-1],
+                                                         flux_axis,
+                                                         alpha_axis,
+                                                         s_in, dnds2,
                                                          gp['omega_prior'],
                                                          alpha_prior)
 
@@ -98,8 +100,8 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
         (posterior_fluxindex, posterior_fluxflux) = \
                               posterior_twoband_gaussian(flux1, flux2,
                                                          total_covariance,
-                                                         bands, fluxvec,
-                                                         alphavec, s_in,
+                                                         freq_bands, flux_axis,
+                                                         alpha_axis, s_in,
                                                          dnds1,
                                                          gp['omega_prior'],
                                                          alpha_prior)
@@ -110,16 +112,16 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
         flux2_dist = np.sum(posterior_fluxflux, axis=0)
 
     # calculate the summaries of the various output PDFs
-    flux1_percentiles = utils.percentile_points(fluxvec, flux1_dist,
+    flux1_percentiles = utils.percentile_points(flux_axis, flux1_dist,
                                                 gp['percentiles'])
 
-    flux2_percentiles = utils.percentile_points(fluxvec, flux2_dist,
+    flux2_percentiles = utils.percentile_points(flux_axis, flux2_dist,
                                                 gp['percentiles'])
 
-    alpha_percentiles = utils.percentile_points(alphavec, alpha_dist,
+    alpha_percentiles = utils.percentile_points(alpha_axis, alpha_dist,
                                                 gp['percentiles'])
 
-    probexceed = utils.prob_exceed(alphavec, alpha_dist,
+    probexceed = utils.prob_exceed(alpha_axis, alpha_dist,
                                    gp['spectral_threshold'])
 
     return (flux1_percentiles, flux2_percentiles, \
@@ -131,7 +133,7 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
 # TODO: do the axis vectors have to be uniform linear spacing, or can they be
 #       more general (index axis must be?)
 def posterior_twoband_gaussian(s_measured1, s_measured2,
-                               covmatrix, freq_bands, fluxaxis, indexaxis,
+                               covmatrix, freq_bands, flux_axis, alpha_axis,
                                s_dnds_model, dnds_model,
                                solid_angle_arcminsq, index_prior,
                                flat_flux_prior=False, debug=False):
@@ -140,8 +142,8 @@ def posterior_twoband_gaussian(s_measured1, s_measured2,
     * The measured fluxes in band 1 (s_measured1) and band 2 (s_measured2)
     * The covariance of the error model of the measured fluxes (covmatrix)
     * The frequencies of the two band (freq_bands)
-    * Vector specifying the axis of flux (fluxaxis), linear spacing
-    * Vector specifying the spectral index axis (indexaxis), linear spacing
+    * Vector specifying the axis of flux (flux_axis), linear spacing
+    * Vector specifying the spectral index axis (alpha_axis), linear spacing
     * The differential source counts n #/Jy/deg^2 in band 1 (dnds_model)
     * Flux axis of the dN/dS model (s_dnds_model)
     * The resolution element solid angle in arcmin^2 (solid_angle_arcminsq)
@@ -151,39 +153,42 @@ def posterior_twoband_gaussian(s_measured1, s_measured2,
     P(S_i1, index | S_m1, S_m2) : posterior_fluxindex
     P(S_i1, S_i2 | S_m1, S_m2) : posterior_fluxflux
     """
+    # let small numbers in the exp round down to 0
+    np.seterr(under='ignore')
 
     freq_ratio = freq_bands[1] / freq_bands[0]
-    (n_fluxaxis, n_indexaxis) = (fluxaxis.size, indexaxis.size)
+    (n_flux_axis, n_alpha_axis) = (flux_axis.size, alpha_axis.size)
     covinv = la.inv(covmatrix)
 
-    np.seterr(all='ignore')     # TODO treat these instead
     # find the likelihood P(S_1m, S_2m | S_1i, index)
     # assuming Gaussian noise with covmatrix
-    residual_fluxindex = np.zeros((2, n_fluxaxis, n_indexaxis))
-    residual_fluxindex[0, :, :] = np.repeat(fluxaxis[:, None],
-                                            n_indexaxis, 1)
+    # variables can either be in terms of flux1, flux2 (named fluxflux)
+    # or flux1 and the spectral index (fluxindex)
+    residual_fluxindex = np.zeros((2, n_flux_axis, n_alpha_axis))
+    residual_fluxindex[0, :, :] = np.repeat(flux_axis[:, None],
+                                            n_alpha_axis, 1)
     # S_2 = S_1 (nu2/nu1)^index
-    index_multiplier = (freq_ratio) ** indexaxis
+    index_multiplier = (freq_ratio) ** alpha_axis
     residual_fluxindex[1, :, :] = residual_fluxindex[0, :, :] * \
                                     index_multiplier[None, :]
     residual_fluxindex[0, :, :] -= s_measured1
     residual_fluxindex[1, :, :] -= s_measured2
+
     # TODO: einsum abi ij abj, residual_fluxindex, covinv, residual_fluxindex?
+    # TODO: can this be shortened to a matrix product eps Cov^-1 eps^T?
     likelihood_fluxindex = np.exp(-np.sum(residual_fluxindex * \
                              np.tensordot(covinv, residual_fluxindex, (0, 0)),
                              axis=0) / 2.)
 
     # find the likelihood P(S_1m, S_2m | S_1i, S_2i)
     # assuming Gaussian noise with covmatrix
-    # variables can either be in terms of flux1, flux2 (named fluxflux)
-    # or flux1 and the spectral index (fluxindex)
-    # TODO: can this be shortened to a matrix product eps Cov^-1 eps^T?
-    residual_fluxflux = np.zeros((2, n_fluxaxis, n_fluxaxis))
-    residual_fluxflux[0, :, :] = np.repeat(fluxaxis[:, None],
-                                           n_fluxaxis, 1)
+    residual_fluxflux = np.zeros((2, n_flux_axis, n_flux_axis))
+    residual_fluxflux[0, :, :] = np.repeat(flux_axis[:, None],
+                                           n_flux_axis, 1)
     residual_fluxflux[1, :, :] = residual_fluxflux[0, :, :].transpose()
     residual_fluxflux[0, :, :] -= s_measured1
     residual_fluxflux[1, :, :] -= s_measured2
+
     likelihood_fluxflux = np.exp(-np.sum(residual_fluxflux * \
                             np.tensordot(covinv, residual_fluxflux, (0, 0)),
                             axis=0) / 2.)
@@ -193,61 +198,65 @@ def posterior_twoband_gaussian(s_measured1, s_measured2,
     pdf_prior_flux = solid_angle_arcminsq / 3600. * dnds_model * \
                      np.exp(-utils.dnds_to_ngts(s_dnds_model, dnds_model) * \
                      solid_angle_arcminsq / 3600.)
+
+    #interpolant = interpolate.splrep(s_dnds_model, pdf_prior_flux)
     interpolant = interpolate.interp1d(s_dnds_model, pdf_prior_flux,
                                        bounds_error=False, fill_value=0.)
-    pdf_prior_flux_int = interpolant(fluxaxis)
+
     # is this correct, or its transpose?
+    #pdf_prior_alpha_int = interpolant(flux_axis * index_multiplier)
+    #pdf_prior_flux_int = interpolate.splev(flux_axis, interpolant)
+    pdf_prior_flux_int = interpolant(flux_axis)
     fluxprior_fluxindex = np.repeat(pdf_prior_flux_int[:, None],
-                                    n_indexaxis, 1)
+                                    n_alpha_axis, 1)
+
     fluxprior_fluxflux = np.repeat(pdf_prior_flux_int[:, None],
-                                   n_fluxaxis, 1)
-    np.seterr(all='raise')
+                                   n_flux_axis, 1)
 
     # find the prior
     # one can either specify the prior in flux or spectral index, and we
     # report the posterior in both flux flux and flux index, so need to convert
     # either of these prior conditions into the axes in the posterior
-    flux_prior = np.zeros((n_fluxaxis, n_fluxaxis))
-    index_prior_matrix = np.zeros((n_fluxaxis, n_indexaxis))
+    flux_prior = np.zeros((n_flux_axis, n_flux_axis))
+    index_prior_matrix = np.zeros((n_flux_axis, n_alpha_axis))
     ln_freq_ratio = np.log(freq_ratio)
-    min_index = min(indexaxis)
-    delta_index = indexaxis[1] - indexaxis[0]
+    min_index = np.min(alpha_axis)
+    delta_index = alpha_axis[1] - alpha_axis[0]
     if flat_flux_prior:
         flux_prior += 1.
         # transform this to an index prior
         # S_2 = S_1 (nu2/nu1)^index
-        index_multiplier = (freq_ratio) ** indexaxis * np.abs(ln_freq_ratio)
-        # is n_indexaxis x n_fluxaxis
-        index_prior_matrix = np.repeat(fluxaxis[:, None],
-                                        n_indexaxis, 1) * \
+        index_multiplier = (freq_ratio) ** alpha_axis * np.abs(ln_freq_ratio)
+        # is n_alpha_axis x n_flux_axis
+        index_prior_matrix = np.repeat(flux_axis[:, None],
+                                        n_alpha_axis, 1) * \
                                         index_multiplier[None, :]
         # try this for comparison
-        #for i in np.arange(n_fluxaxis):
-        #    index_prior_matrix[i, :] = fluxaxis[i] * \
-        #                               (freq_ratio) ** indexaxis * \
+        #for i in np.arange(n_flux_axis):
+        #    index_prior_matrix[i, :] = flux_axis[i] * \
+        #                               (freq_ratio) ** alpha_axis * \
         #                               np.abs(ln_freq_ratio)
     else:
-        for i in np.arange(n_fluxaxis):
+        for i in np.arange(n_flux_axis):
             index_prior_matrix[i, :] = index_prior
             # find the flux prior from the index prior
             # transform index prior into flux prior.
             # first, calculate effective index for each value of band2 flux.
-            index_smax2 = np.log(fluxaxis / fluxaxis[i]) / ln_freq_ratio
+            index_smax2 = np.log(flux_axis / flux_axis[i]) / ln_freq_ratio
             # TODO: do this with bisect?
             index_indices = np.round((index_smax2 - min_index) / delta_index)
 
             whneg = (index_indices < 0)
             index_indices[np.where(whneg)] = 0
-            whtb = (index_indices >= n_indexaxis)
-            index_indices[np.where(whtb)] = n_indexaxis - 1
+            whtb = (index_indices >= n_alpha_axis)
+            index_indices[np.where(whtb)] = n_alpha_axis - 1
 
             index_to_flux = index_prior[index_indices.astype(int)]
-            flux_prior[i, :] = index_to_flux / (fluxaxis * abs(ln_freq_ratio))
+            flux_prior[i, :] = index_to_flux / (flux_axis * abs(ln_freq_ratio))
 
             flux_prior[i, np.where(whneg)] = 0.
             flux_prior[i, np.where(whtb)] = 0.
 
-    np.seterr(all='ignore')  # TODO: remove this!
     # P(S_i1, index | S_m1, S_m2) = P(S_m1, S_m2 | S_i1, index) P(S_i1, index)
     # P(S_i1, index) = P(S_i1) P(index)
     # TODO: normalize?
@@ -257,8 +266,8 @@ def posterior_twoband_gaussian(s_measured1, s_measured2,
 
     # P(S_i1, S_i2 | S_m1, S_m2) = P(S_m1, S_m2 | S_i1, S_i2) P(S_i1, S_i2)
     posterior_fluxflux = likelihood_fluxflux * fluxprior_fluxflux * flux_prior
-    np.seterr(all='raise')   # TODO: remove this!
 
+    np.seterr(under='raise')
     if debug:
         import shelve
         d = shelve.open("posterior.shelve")
@@ -272,8 +281,8 @@ def posterior_twoband_gaussian(s_measured1, s_measured2,
         d["s_in"] = s_dnds_model
         d["ngts_in"] = utils.dnds_to_ngts(s_dnds_model, dnds_model)
         d["psmax"] = pdf_prior_flux
-        d["alphavec"] = indexaxis
-        d["fluxvec"] = fluxaxis
+        d["alpha_axis"] = alpha_axis
+        d["flux_axis"] = flux_axis
         d["posterior_fluxindex"] = posterior_fluxindex
         d["posterior_fluxflux"] = posterior_fluxflux
         d.close()
