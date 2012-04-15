@@ -72,10 +72,10 @@ def compare_catalogs(params, translate, septol=1e-3):
                     1000.)) - orig_flux2) / orig_flux2 * 100.
 
         print "ind" + "-" * 69
-        print utils.pm_error(entry["alpha_posterior"], "%5.3g")
+        print utils.pm_error(entry["alpha_posterior_det"], "%5.3g")
         print orig_alpha
         if (np.all(orig_alpha > 0)):
-            print (np.array(utils.pm_vector(entry["alpha_posterior"])) -
+            print (np.array(utils.pm_vector(entry["alpha_posterior_det"])) -
                   orig_alpha) / orig_alpha * 100.
 
         print "P(a>t) new: " + repr(entry["prob_exceed_det"]) + \

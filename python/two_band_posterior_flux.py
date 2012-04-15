@@ -70,8 +70,6 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
         print "joint code using cal covariance:" + repr(cov_calibration_jy)
         print "joint code using covariance:" + repr(total_covariance)
 
-    # TODO: is this the correct ordering? seems swapped
-    # TODO: make this more elegant!
     if swap_flux:
         if gp['verbose']:
             print "running band-2 selected source case (swapped)"
@@ -90,7 +88,7 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
                                                          alpha_prior)
 
         alpha_dist = np.sum(posterior_fluxindex, axis=0)
-        #alpha_dist = np.sum(posterior_fluxindex, axis=1)
+        #flux2_dist = np.sum(posterior_fluxindex, axis=1)
         flux1_dist = np.sum(posterior_fluxflux, axis=0)
         flux2_dist = np.sum(posterior_fluxflux, axis=1)
     else:
@@ -100,9 +98,10 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
         (posterior_fluxindex, posterior_fluxflux) = \
                               posterior_twoband_gaussian(flux1, flux2,
                                                          total_covariance,
-                                                         freq_bands, flux_axis,
-                                                         alpha_axis, s_in,
-                                                         dnds1,
+                                                         freq_bands,
+                                                         flux_axis,
+                                                         alpha_axis,
+                                                         s_in, dnds1,
                                                          gp['omega_prior'],
                                                          alpha_prior)
 
@@ -128,6 +127,7 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
             alpha_percentiles, probexceed)
 
 
+# TODO: numpy.einsum may be able to do some operations faster
 # TODO: optionally pass P(S_max) instead of deriving it internally from dN/dS
 # TODO: check that all relevant array dimensions agree
 # TODO: do the axis vectors have to be uniform linear spacing, or can they be
@@ -152,6 +152,9 @@ def posterior_twoband_gaussian(s_measured1, s_measured2,
     Output:
     P(S_i1, index | S_m1, S_m2) : posterior_fluxindex
     P(S_i1, S_i2 | S_m1, S_m2) : posterior_fluxflux
+
+    Variables can either be in terms of flux1, flux2 (named fluxflux)
+    or flux1 and the spectral index (fluxindex)
     """
     # let small numbers in the exp round down to 0
     np.seterr(under='ignore')
@@ -162,8 +165,6 @@ def posterior_twoband_gaussian(s_measured1, s_measured2,
 
     # find the likelihood P(S_1m, S_2m | S_1i, index)
     # assuming Gaussian noise with covmatrix
-    # variables can either be in terms of flux1, flux2 (named fluxflux)
-    # or flux1 and the spectral index (fluxindex)
     residual_fluxindex = np.zeros((2, n_flux_axis, n_alpha_axis))
     residual_fluxindex[0, :, :] = np.repeat(flux_axis[:, None],
                                             n_alpha_axis, 1)
@@ -174,8 +175,6 @@ def posterior_twoband_gaussian(s_measured1, s_measured2,
     residual_fluxindex[0, :, :] -= s_measured1
     residual_fluxindex[1, :, :] -= s_measured2
 
-    # TODO: einsum abi ij abj, residual_fluxindex, covinv, residual_fluxindex?
-    # TODO: can this be shortened to a matrix product eps Cov^-1 eps^T?
     likelihood_fluxindex = np.exp(-np.sum(residual_fluxindex * \
                              np.tensordot(covinv, residual_fluxindex, (0, 0)),
                              axis=0) / 2.)
@@ -239,11 +238,21 @@ def posterior_twoband_gaussian(s_measured1, s_measured2,
     else:
         for i in np.arange(n_flux_axis):
             index_prior_matrix[i, :] = index_prior
+            # flux -> index -> index_indices
+            #interpolant = interpolate.interp1d(alpha_axis,
+            #                                   range(len(alpha_axis)),
+            #                                   bounds_error=False, fill_value=0.)
+            #index_smax2 = np.log(flux_axis / flux_axis[i]) / ln_freq_ratio
+            #index_indices = interpolant(index_smax2)
+            #index_to_flux = index_prior[index_indices.astype(int)]
+            #flux_prior[i, :] = index_to_flux / (flux_axis * abs(ln_freq_ratio))
+            #flux_prior[i, np.where(whneg)] = 0.
+            #flux_prior[i, np.where(whtb)] = 0.
+
             # find the flux prior from the index prior
             # transform index prior into flux prior.
             # first, calculate effective index for each value of band2 flux.
             index_smax2 = np.log(flux_axis / flux_axis[i]) / ln_freq_ratio
-            # TODO: do this with bisect?
             index_indices = np.round((index_smax2 - min_index) / delta_index)
 
             whneg = (index_indices < 0)
@@ -259,7 +268,6 @@ def posterior_twoband_gaussian(s_measured1, s_measured2,
 
     # P(S_i1, index | S_m1, S_m2) = P(S_m1, S_m2 | S_i1, index) P(S_i1, index)
     # P(S_i1, index) = P(S_i1) P(index)
-    # TODO: normalize?
     posterior_fluxindex = likelihood_fluxindex * \
                           fluxprior_fluxindex * \
                           index_prior_matrix
