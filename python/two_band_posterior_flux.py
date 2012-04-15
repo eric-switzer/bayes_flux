@@ -128,10 +128,6 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
 
 
 # TODO: numpy.einsum may be able to do some operations faster
-# TODO: optionally pass P(S_max) instead of deriving it internally from dN/dS
-# TODO: check that all relevant array dimensions agree
-# TODO: do the axis vectors have to be uniform linear spacing, or can they be
-#       more general (index axis must be?)
 def posterior_twoband_gaussian(s_measured1, s_measured2,
                                covmatrix, freq_bands, flux_axis, alpha_axis,
                                s_dnds_model, dnds_model,
@@ -230,24 +226,9 @@ def posterior_twoband_gaussian(s_measured1, s_measured2,
         index_prior_matrix = np.repeat(flux_axis[:, None],
                                         n_alpha_axis, 1) * \
                                         index_multiplier[None, :]
-        # try this for comparison
-        #for i in np.arange(n_flux_axis):
-        #    index_prior_matrix[i, :] = flux_axis[i] * \
-        #                               (freq_ratio) ** alpha_axis * \
-        #                               np.abs(ln_freq_ratio)
     else:
         for i in np.arange(n_flux_axis):
             index_prior_matrix[i, :] = index_prior
-            # flux -> index -> index_indices
-            #interpolant = interpolate.interp1d(alpha_axis,
-            #                                   range(len(alpha_axis)),
-            #                                   bounds_error=False, fill_value=0.)
-            #index_smax2 = np.log(flux_axis / flux_axis[i]) / ln_freq_ratio
-            #index_indices = interpolant(index_smax2)
-            #index_to_flux = index_prior[index_indices.astype(int)]
-            #flux_prior[i, :] = index_to_flux / (flux_axis * abs(ln_freq_ratio))
-            #flux_prior[i, np.where(whneg)] = 0.
-            #flux_prior[i, np.where(whtb)] = 0.
 
             # find the flux prior from the index prior
             # transform index prior into flux prior.

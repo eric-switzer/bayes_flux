@@ -1,6 +1,6 @@
-bayes_flux
-==========
-bayes_flux is a Bayesian flux reconstruction for astronomical surveys in two bands. 
+`bayes_flux`
+============
+`bayes_flux` is a Bayesian flux reconstruction for astronomical surveys in two bands.
 
 Assumptions:
 ------------
@@ -9,11 +9,11 @@ Assumptions:
 
 Usage:
 ------
-1. adapt load_catalog.py to load your source catalogs
+1. adapt `load_catalog.py` to load your source catalogs
 2. calculate and plug in your survey-specific covariance between bands
-3. adapt source_count_models.py and process_catalogs.py to reflect the source count priors 
+3. adapt `source_count_models.py` and `process_catalogs.py` to reflect the source count priors
 
-Disclaimer: this (github) version represents the active development version. We provide default examples to test the code against values in literature, but you should look critically at what the code does before using it in published work. Once a version with reasonable functionality has stabilized, the intent is to move it to http://pole.uchicago.edu/public/data/vieira09/index.html
+Disclaimer: this is active development version. We provide default examples to test the code against values in literature, but you should look critically at what the code does before using it in published work. Find official comparison catalogs on: `http://pole.uchicago.edu/public/data/vieira09/index.html`
 
 Primary citation:
 ------------------
@@ -32,30 +32,32 @@ In addition to the main code, cite counts models used in the prior:
 Title: Radio and millimeter continuum surveys and their astrophysical implications
 Authors: de Zotti, Gianfranco; Massardi, Marcella; Negrello, Mattia; Wall, Jasper
 Publication: The Astronomy and Astrophysics Review, Volume 18, Issue 1-2, pp. 1-65, 2/2010
-ADS Bibliographic Code: 2010A&ARv..18....1D
-Website: http://web.oapd.inaf.it/rstools/srccnt/srccnt_tables.html
+ADS Bibliographic Code: `2010A&ARv..18....1D`
+Website: `http://web.oapd.inaf.it/rstools/srccnt/srccnt_tables.html`
 
 Title: Modeling the evolution of infrared galaxies: a parametric backward evolution model
 Authors: Béthermin, M.; Dole, H.; Lagache, G.; Le Borgne, D.; Penin, A.
 Publication: Astronomy & Astrophysics, Volume 529, id.A4, 5/2011
-ADS Bibliographic Code: 2011A&A...529A...4B
-Website: http://www.ias.u-psud.fr/irgalaxies/model.php
+ADS Bibliographic Code: `2011A&A...529A...4B`
+Website: `http://www.ias.u-psud.fr/irgalaxies/model.php`
 
 Note that the counts models here do not coincide with those used in the prior of SPT source catalog paper, Vieira 2009 (which were private communications and need to be cleared for publication with the code), so the deboosted fluxes will be a little different, especially at low flux.
 
-Suggestions for calculating cov_calibration for other surveys:
+Suggestions for calculating `cov_calibration` for other surveys:
 --------------------------------------------------------------
 * Use flux recovery simulations to estimate the calibration/beam error covariance. (a set of PSFs drawn from the error model implies scatter in flux; can do in Fourier/multipole space)
 * Find the covariance of background fluctuations by applying the matched finding/photometry filter, and calculating the covariance between bands. The map could either be: 1) an empirical noise estimate (e.g. difference map) + CMB etc. realization + source realization up to the threshold, 2) the real map with sources removed down to the threshold.
 
 Major TODOs of the current code and wish list:
 ----------------------------------------------
-* Extend to >2 bands.
+* Extend to  greater than 2 bands.
 * Write some generic code to read the IR and radio source count models: given name and freq find closest band and transform the counts if necessary
-* Add http://cmbr.phas.ubc.ca/model/, and other counts models cited on http://www.ias.u-psud.fr/irgalaxies/model.php
+* Add `http://cmbr.phas.ubc.ca/model/`, and other counts models cited on `http://www.ias.u-psud.fr/irgalaxies/model.php`
 * Code to plot/compare counts models
 * Code to simulate surveys under basic noise and source population assumptions
 * Write unit tests for the major functions
+* Pass in a flux prior from simulations instead of the analytic form
+* Permit more general dN/dS without linear spacing
 
 Authors (software):
 -------------------
