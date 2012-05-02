@@ -53,7 +53,8 @@ def process_ptsrc_catalog_alpha(catalog, gp):
     # TODO: this is really not very generic now
     # frequencies are hard-coded into particular lookup tables
     # TODO: why let this extend beyond the log-stepped axis (1.)?
-    input_s_linear = np.linspace(1.e-8, 1.5, 1e5, endpoint=False)
+    #input_s_linear = np.linspace(1.e-8, 1.5, 1e5, endpoint=False)
+    input_s_linear = np.linspace(1.e-8, 5, 1e5, endpoint=False)
     if gp['use_spt_model']:
         import spt_source_count_models as sptdnds
 

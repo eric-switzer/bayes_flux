@@ -76,6 +76,7 @@ def load_selfdescribing_numpy(filename, swaps=None, desctoken="desc:",
     print ("load_selfdescribing_numpy: fields = " + repr(output.dtype.names)
            + ", n_records = " + repr(output.size))
 
+    #print output
     return output
 
 

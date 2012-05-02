@@ -24,7 +24,11 @@ def wrap_process_catalog(params, translate):
 
 
 def main():
-    r"""main command-line interface"""
+    r"""main command-line interface
+    python bayes_flux.py ../data/spt_catalog.ini | tee catalog_run.log
+    python bayes_flux.py ../data/spt_catalog.ini -c | tee comp.log
+    enscript -2Gr comp.log -p comprun.ps
+    """
 
     parser = OptionParser(usage="usage: %prog [options] filename",
                           version="%prog 1.0")
