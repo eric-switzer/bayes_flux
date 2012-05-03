@@ -3,6 +3,7 @@ import numpy as np
 import source_count_models as dnds
 import utilities as utils
 import two_band_posterior_flux as tbpf
+import plot_2d_pdf
 
 
 def process_ptsrc_catalog_alpha(catalog, gp):
@@ -53,7 +54,9 @@ def process_ptsrc_catalog_alpha(catalog, gp):
     # TODO: this is really not very generic now
     # frequencies are hard-coded into particular lookup tables
     # TODO: why let this extend beyond the log-stepped axis (1.)?
-    input_s_linear = np.linspace(1.e-8, 1.5, 1e5, endpoint=False)
+    input_s_linear = np.linspace(gp['dnds_minflux'],
+                                 gp['dnds_maxflux'],
+                                 gp['dnds_numflux'], endpoint=False)
     if gp['use_spt_model']:
         import spt_source_count_models as sptdnds
 
@@ -141,6 +144,30 @@ def process_ptsrc_catalog_alpha(catalog, gp):
                                                              posterior_swap[1]
             source_entry["alpha_posterior_det"] = posterior_swap[2]
             source_entry["prob_exceed_det"] = posterior_swap[3]
+
+        # plot the 2D posteriors
+        if gp['make_2dplot']:
+            full_package = posterior[4]
+            full_package_swap = posterior_swap[4]
+
+            if ((flux1 / sigma1) > (flux2 / sigma2)):
+                plot_2d_pdf.gnuplot_2D("../plots/%s_fluxflux.png" % srcname,
+                                       full_package["posterior_fluxflux"],
+                                       full_package["flux_axis"] * 1000.,
+                                       full_package["flux_axis"] * 1000.,
+                                       ["148 GHz Flux (mJy)",
+                                        "220 GHz Flux (mJy)"],
+                                       1., srcname, "", logscale=False)
+
+            else:
+                plot_2d_pdf.gnuplot_2D(
+                       "../plots/%s_fluxflux_swap.png" % srcname,
+                       np.transpose(full_package_swap["posterior_fluxflux"]),
+                                       full_package_swap["flux_axis"] * 1000.,
+                                       full_package_swap["flux_axis"] * 1000.,
+                                       ["148 GHz Flux (mJy)",
+                                        "220 GHz Flux (mJy)"],
+                                       1., srcname, "", logscale=False)
 
         augmented_catalog[srcname] = source_entry
 

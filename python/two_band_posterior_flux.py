@@ -70,6 +70,8 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
         print "joint code using cal covariance:" + repr(cov_calibration_jy)
         print "joint code using covariance:" + repr(total_covariance)
 
+    full_package = {}
+
     if swap_flux:
         if gp['verbose']:
             print "running band-2 selected source case (swapped)"
@@ -91,6 +93,7 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
         #flux2_dist = np.sum(posterior_fluxindex, axis=1)
         flux1_dist = np.sum(posterior_fluxflux, axis=0)
         flux2_dist = np.sum(posterior_fluxflux, axis=1)
+
     else:
         if gp['verbose']:
             print "running band-1 selected source case"
@@ -110,6 +113,12 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
         flux1_dist = np.sum(posterior_fluxflux, axis=1)
         flux2_dist = np.sum(posterior_fluxflux, axis=0)
 
+
+    full_package["posterior_fluxindex"] = posterior_fluxindex
+    full_package["posterior_fluxflux"] = posterior_fluxflux
+    full_package["flux_axis"] = flux_axis
+    full_package["alpha_axis"] = alpha_axis
+
     # calculate the summaries of the various output PDFs
     flux1_percentiles = utils.percentile_points(flux_axis, flux1_dist,
                                                 gp['percentiles'])
@@ -124,7 +133,7 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
                                    gp['spectral_threshold'])
 
     return (flux1_percentiles, flux2_percentiles, \
-            alpha_percentiles, probexceed)
+            alpha_percentiles, probexceed, full_package)
 
 
 # TODO: numpy.einsum may be able to do some operations faster
