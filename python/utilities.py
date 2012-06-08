@@ -140,8 +140,12 @@ def percentile_points(axis, pdf, percentiles):
 
     for index, percentile in enumerate(percentiles):
         try:
-            cdf = np.cumsum(pdf) / float(np.sum(pdf))
-            cdf_points[index] = np.nanmin(axis[cdf >= percentile])
+            # oritinal
+            #cdf = np.cumsum(pdf) / float(np.sum(pdf))
+            #cdf = np.cumsum(pdf) / np.sum(pdf)
+            #cdf_points[index] = np.nanmin(axis[cdf >= percentile])
+            percentile_range = (np.cumsum(pdf) >= (percentile * np.sum(pdf)))
+            cdf_points[index] = np.nanmin(axis[percentile_range])
         except FloatingPointError:
             print "percentile_points: invalid PDF"
             cdf = np.zeros_like(pdf)

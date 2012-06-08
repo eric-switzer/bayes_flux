@@ -17,13 +17,6 @@ def process_ptsrc_catalog_alpha(catalog, gp):
               over='raise', under='raise',
               invalid='raise')
 
-    # convert flux150, sigma150, flux220, sigma220 from mJy to Jy
-    if gp['catalog_in_mjy']:
-        catalog[:][gp['flux1name']] /= 1000.
-        catalog[:][gp['sigma1name']] /= 1000.
-        catalog[:][gp['flux2name']] /= 1000.
-        catalog[:][gp['sigma2name']] /= 1000.
-
     fielddtype = catalog.dtype.fields
 
     print "Starting process_ptsrc_catalog_alpha on " + repr(catalog.size) + \
@@ -41,14 +34,6 @@ def process_ptsrc_catalog_alpha(catalog, gp):
            utils.fancy_vector(gp['percentiles'], "%5.3g")
 
     print "Output/input fluxes assumed to be in Jy. (unless specified as mJy)"
-
-    # find the type for the flux and errors and make fields for the output
-    flux1type = fielddtype[gp['flux1name']][0]
-    flux2type = fielddtype[gp['flux2name']][0]
-
-    if flux1type != flux2type:
-        print "ERROR: input fluxes do not have the same type"
-        return None
 
     # calculate theory dN/dS
     # TODO: this is really not very generic now
@@ -77,15 +62,24 @@ def process_ptsrc_catalog_alpha(catalog, gp):
         sigma1 = catalog[srcindex][gp['sigma1name']]
         sigma2 = catalog[srcindex][gp['sigma2name']]
 
+        # convert flux150, sigma150, flux220, sigma220 from mJy to Jy
+        if gp['catalog_in_mjy']:
+            flux1 /= 1000.
+            flux2 /= 1000.
+            sigma1 /= 1000.
+            sigma2 /= 1000.
+
         # if the catalog has off-diagonal covariance for the flux
-        if gp['sigma12name'] != None:
-            sigma12 = catalog[srcindex][gp['sigma12name']]
-        else:
-            sigma12 = 0.
+        #if gp['sigma12name'] != None:
+        #    sigma12 = catalog[srcindex][gp['sigma12name']]
+        #else:
+        #    sigma12 = 0.
+
+        if gp['sigma12'] != None:
+            sigma12 = float(gp['sigma12'])
+            print "using sigma12 (Jy): %10.15g" % sigma12
 
         srcname = repr(catalog[srcindex][gp['keyfield_name']])
-        ra = catalog[srcindex]['ra']
-        dec = catalog[srcindex]['dec']
 
         print "-" * 80
         print "Starting analysis on source %s (# %d), " % \
@@ -93,8 +87,7 @@ def process_ptsrc_catalog_alpha(catalog, gp):
                "flux1 is [mJy]: %5.3g +/- %5.3g, " % \
                     (flux1 * 1000., sigma1 * 1000.) + \
                "flux2 is [mJy]: %5.3g +/- %5.3g, " % \
-                    (flux2 * 1000., sigma2 * 1000.) + \
-               "RA/Dec: %6.4g/%6.4g" % (ra, dec)
+                    (flux2 * 1000., sigma2 * 1000.)
 
         posterior = tbpf.two_band_posterior_flux(flux1, flux2,
                                                  sigma1, sigma2,
@@ -149,6 +142,7 @@ def process_ptsrc_catalog_alpha(catalog, gp):
         if gp['make_2dplot']:
             full_package = posterior[4]
             full_package_swap = posterior_swap[4]
+            logscale = True
 
             if ((flux1 / sigma1) > (flux2 / sigma2)):
                 plot_2d_pdf.gnuplot_2D("../plots/%s_fluxflux.png" % srcname,
@@ -157,7 +151,7 @@ def process_ptsrc_catalog_alpha(catalog, gp):
                                        full_package["flux_axis"] * 1000.,
                                        ["148 GHz Flux (mJy)",
                                         "220 GHz Flux (mJy)"],
-                                       1., srcname, "", logscale=False)
+                                       1., srcname, "", logscale=logscale)
 
             else:
                 plot_2d_pdf.gnuplot_2D(
@@ -167,7 +161,7 @@ def process_ptsrc_catalog_alpha(catalog, gp):
                                        full_package_swap["flux_axis"] * 1000.,
                                        ["148 GHz Flux (mJy)",
                                         "220 GHz Flux (mJy)"],
-                                       1., srcname, "", logscale=False)
+                                       1., srcname, "", logscale=logscale)
 
         augmented_catalog[srcname] = source_entry
 

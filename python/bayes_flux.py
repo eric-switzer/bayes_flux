@@ -23,7 +23,7 @@ def wrap_process_catalog(params, translate):
     outputshelve.close()
 
 
-def main():
+if __name__ == '__main__':
     r"""main command-line interface"""
 
     parser = OptionParser(usage="usage: %prog [options] filename",
@@ -58,7 +58,3 @@ def main():
     else:
         print "comparing catalogs"
         cc.compare_catalogs(params, translate)
-
-
-if __name__ == '__main__':
-    main()

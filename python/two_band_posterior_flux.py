@@ -44,8 +44,18 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
     # convert the fractional beam/cal covariance to a flux covariance
     fluxes = np.array([flux1, flux2])
 
+    minflux = min([flux1 - 6. * sigma1, flux2 - 6. * sigma2])
+    # if the N-sigma point is < 0, reset it to be a little above 0
+    # so the log-space calculations do not have errors
+    if minflux < 0.:
+        minflux = flux1/100.
+
+    maxflux = max([flux1 + 6. * sigma1, flux2 + 6. * sigma2])
+
+    #flux_axis = np.linspace(minflux, maxflux, num=gp['num_flux'])
+    # alternate
     flux_axis = (np.arange(0, gp['num_flux']) + 0.5)
-    flux_axis *= 1. / float(gp['num_flux']) * 1.5 * max(fluxes)
+    flux_axis *= 1. / float(gp['num_flux']) * 1.5 * np.max(fluxes)
 
     # if given, convert the fractional calibration error into Jy^2
     if (gp['cov_calibration'] != None):
@@ -67,8 +77,8 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
 
     if gp['verbose']:
         print "joint code using noise covariance:" + repr(cov_noise_jy)
-        print "joint code using cal covariance:" + repr(cov_calibration_jy)
-        print "joint code using covariance:" + repr(total_covariance)
+        #print "joint code using cal covariance:" + repr(cov_calibration_jy)
+        print "joint code using total covariance:" + repr(total_covariance)
 
     full_package = {}
 
@@ -264,6 +274,7 @@ def posterior_twoband_gaussian(s_measured1, s_measured2,
 
     # P(S_i1, S_i2 | S_m1, S_m2) = P(S_m1, S_m2 | S_i1, S_i2) P(S_i1, S_i2)
     posterior_fluxflux = likelihood_fluxflux * fluxprior_fluxflux * flux_prior
+    #posterior_fluxflux = fluxprior_fluxflux * flux_prior
 
     np.seterr(under='raise')
     if debug:
