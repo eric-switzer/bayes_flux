@@ -3,7 +3,6 @@ import numpy as np
 import source_count_models as dnds
 import utilities as utils
 import two_band_posterior_flux as tbpf
-import plot_2d_pdf
 
 
 def process_ptsrc_catalog_alpha(catalog, gp):
@@ -89,14 +88,14 @@ def process_ptsrc_catalog_alpha(catalog, gp):
                "flux2 is [mJy]: %5.3g +/- %5.3g, " % \
                     (flux2 * 1000., sigma2 * 1000.)
 
-        posterior = tbpf.two_band_posterior_flux(flux1, flux2,
+        posterior = tbpf.two_band_posterior_flux(srcname, flux1, flux2,
                                                  sigma1, sigma2,
                                                  sigma12, input_s_linear,
                                                  dnds_tot_linear_band1,
                                                  dnds_tot_linear_band2,
                                                  gp, swap_flux=False)
 
-        posterior_swap = tbpf.two_band_posterior_flux(flux1, flux2,
+        posterior_swap = tbpf.two_band_posterior_flux(srcname, flux1, flux2,
                                                       sigma1, sigma2,
                                                       sigma12, input_s_linear,
                                                       dnds_tot_linear_band1,
@@ -137,31 +136,6 @@ def process_ptsrc_catalog_alpha(catalog, gp):
                                                              posterior_swap[1]
             source_entry["alpha_posterior_det"] = posterior_swap[2]
             source_entry["prob_exceed_det"] = posterior_swap[3]
-
-        # plot the 2D posteriors
-        if gp['make_2dplot']:
-            full_package = posterior[4]
-            full_package_swap = posterior_swap[4]
-            logscale = True
-
-            if ((flux1 / sigma1) > (flux2 / sigma2)):
-                plot_2d_pdf.gnuplot_2D("../plots/%s_fluxflux.png" % srcname,
-                                       full_package["posterior_fluxflux"],
-                                       full_package["flux_axis"] * 1000.,
-                                       full_package["flux_axis"] * 1000.,
-                                       ["148 GHz Flux (mJy)",
-                                        "220 GHz Flux (mJy)"],
-                                       1., srcname, "", logscale=logscale)
-
-            else:
-                plot_2d_pdf.gnuplot_2D(
-                       "../plots/%s_fluxflux_swap.png" % srcname,
-                       np.transpose(full_package_swap["posterior_fluxflux"]),
-                                       full_package_swap["flux_axis"] * 1000.,
-                                       full_package_swap["flux_axis"] * 1000.,
-                                       ["148 GHz Flux (mJy)",
-                                        "220 GHz Flux (mJy)"],
-                                       1., srcname, "", logscale=logscale)
 
         augmented_catalog[srcname] = source_entry
 

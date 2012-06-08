@@ -3,9 +3,10 @@ import numpy as np
 import utilities as utils
 from scipy import interpolate
 from numpy import linalg as la
+import plot_2d_pdf
 
 
-def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
+def two_band_posterior_flux(srcname, flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
                             dnds2, gp, swap_flux=False):
     '''
     A wrapper to two band posterior flux methods which returns the
@@ -80,8 +81,6 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
         #print "joint code using cal covariance:" + repr(cov_calibration_jy)
         print "joint code using total covariance:" + repr(total_covariance)
 
-    full_package = {}
-
     if swap_flux:
         if gp['verbose']:
             print "running band-2 selected source case (swapped)"
@@ -123,11 +122,18 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
         flux1_dist = np.sum(posterior_fluxflux, axis=1)
         flux2_dist = np.sum(posterior_fluxflux, axis=0)
 
+    # plot the 2D posteriors
+    if gp['make_2dplot']:
+        logscale = True
+        if swap_flux:
+            filename = "../plots/%s_fluxflux_swap.png" % srcname
+        else:
+            filename = "../plots/%s_fluxflux.png" % srcname
 
-    full_package["posterior_fluxindex"] = posterior_fluxindex
-    full_package["posterior_fluxflux"] = posterior_fluxflux
-    full_package["flux_axis"] = flux_axis
-    full_package["alpha_axis"] = alpha_axis
+        plot_2d_pdf.gnuplot_2D(filename, posterior_fluxflux,
+                               flux_axis * 1000., flux_axis * 1000.,
+                               ["148 GHz Flux (mJy)", "220 GHz Flux (mJy)"],
+                                1., srcname, "", logscale=logscale)
 
     # calculate the summaries of the various output PDFs
     flux1_percentiles = utils.percentile_points(flux_axis, flux1_dist,
@@ -142,8 +148,10 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
     probexceed = utils.prob_exceed(alpha_axis, alpha_dist,
                                    gp['spectral_threshold'])
 
+    # can optionally output: flux_axis, alpha_axis, posterior_fluxindex
+    # and posterior_fluxflux to get a full record of the posterior space
     return (flux1_percentiles, flux2_percentiles, \
-            alpha_percentiles, probexceed, full_package)
+            alpha_percentiles, probexceed)
 
 
 # TODO: numpy.einsum may be able to do some operations faster
