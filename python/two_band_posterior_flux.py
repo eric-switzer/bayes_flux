@@ -140,7 +140,7 @@ def two_band_posterior_flux(srcname, flux1, flux2, sigma1, sigma2, sigma12, s_in
     summary["flux1"] = utils.percentile_points(flux_axis, flux1_dist,
                                                 gp['percentiles'])
 
-    summary["flux1"] = utils.percentile_points(flux_axis, flux2_dist,
+    summary["flux2"] = utils.percentile_points(flux_axis, flux2_dist,
                                                 gp['percentiles'])
 
     summary["alpha"] = utils.percentile_points(alpha_axis, alpha_dist,

@@ -16,9 +16,25 @@ def process_ptsrc_catalog_alpha(catalog, gp):
               over='raise', under='raise',
               invalid='raise')
 
-    fielddtype = catalog.dtype.fields
+    # get the catalog parameters
+    try:
+        fielddtype = catalog.dtype.fields
+        fields = fielddtype.keys()
+        catalog_size = catalog.size
+    except:
+        pass
 
-    print "Starting process_ptsrc_catalog_alpha on " + repr(catalog.size) + \
+    try:
+        fields = catalog.cols.keys()
+        catalog_size = len(catalog)
+    except:
+        pass
+
+    if not fields or not catalog_size:
+        print "could not determine catalog parameters"
+        return 0
+
+    print "Starting process_ptsrc_catalog_alpha on " + repr(catalog_size) + \
           " sources with key field name: " + repr(gp['keyfield_name'])
 
     print "Band1 named " + repr(gp['flux1name']) + " has frequency " + \
@@ -54,7 +70,7 @@ def process_ptsrc_catalog_alpha(catalog, gp):
         dnds_tot_linear_band2 = dnds.dnds_total(input_s_linear, "217GHz")
 
     augmented_catalog = {}
-    for srcindex in np.arange(catalog.size):
+    for srcindex in np.arange(catalog_size):
         flux1 = catalog[srcindex][gp['flux1name']]
         flux2 = catalog[srcindex][gp['flux2name']]
 
@@ -104,7 +120,7 @@ def process_ptsrc_catalog_alpha(catalog, gp):
 
         # copy the source data from the input catalog to the output dict
         source_entry = {}
-        for name in fielddtype.keys():
+        for name in fields:
             source_entry[name] = catalog[srcindex][name]
 
         # find the spectral index of the raw fluxes between bands

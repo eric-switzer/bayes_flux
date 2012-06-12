@@ -6,14 +6,28 @@ import compare_catalogs as cc
 import utilities as utils
 import process_catalog
 import shelve
-
+import os
 
 def wrap_process_catalog(params, translate):
     r"""Based on the ini file, load the catalog and general parameters
     """
-    catalog = sd.load_selfdescribing_numpy(params['catalog_filename'],
-                                           swaps=translate,
-                                           verbose=params['verbose'])
+    (root, extension) = os.path.splitext(params['catalog_filename'])
+
+    if extension == ".dat":
+        print "opening a catalog in the self-describing text format"
+        catalog = sd.load_selfdescribing_numpy(params['catalog_filename'],
+                                               swaps=translate,
+                                               verbose=params['verbose'])
+
+    if extension == ".pickle":
+        import pickle
+        import catalog
+        print "opening a catalog as a pickled catalog object"
+        catalog = pickle.load(open(params['catalog_filename'], "r"))
+
+    if not catalog:
+        print "Could not identify catalog type"
+        return
 
     augmented_catalog = process_catalog.process_ptsrc_catalog_alpha(
                                                     catalog, params)
