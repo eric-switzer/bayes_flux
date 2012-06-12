@@ -115,48 +115,36 @@ def process_ptsrc_catalog_alpha(catalog, gp):
             print "source " + srcname + " has no defined raw index (S < 0)"
             source_entry["raw_simple_alpha"] = np.nan
 
-        source_entry[gp['flux1name'] + "_posterior"] = posterior[0]
-        source_entry[gp['flux2name'] + "_posterior"] = posterior[1]
-        source_entry["alpha_posterior"] = posterior[2]
-        source_entry["prob_exceed"] = posterior[3]
-        source_entry[gp['flux1name'] + "_posterior_swap"] = posterior_swap[0]
-        source_entry[gp['flux2name'] + "_posterior_swap"] = posterior_swap[1]
-        source_entry["alpha_posterior_swap"] = posterior_swap[2]
-        source_entry["prob_exceed_swap"] = posterior_swap[3]
+        source_entry["posterior_flux1det"] = posterior
+        source_entry["posterior_flux2det"] = posterior_swap
         # assign the posterior flux based on the detection band
         if ((flux1 / sigma1) > (flux2 / sigma2)):
-            source_entry[gp['flux1name'] + "_posterior_det"] = posterior[0]
-            source_entry[gp['flux2name'] + "_posterior_det"] = posterior[1]
-            source_entry["alpha_posterior_det"] = posterior[2]
-            source_entry["prob_exceed_det"] = posterior[3]
+            source_entry["posterior"] = posterior
         else:
-            source_entry[gp['flux1name'] + "_posterior_det"] = \
-                                                             posterior_swap[0]
-            source_entry[gp['flux2name'] + "_posterior_det"] = \
-                                                             posterior_swap[1]
-            source_entry["alpha_posterior_det"] = posterior_swap[2]
-            source_entry["prob_exceed_det"] = posterior_swap[3]
+            source_entry["posterior"] = posterior_swap
 
         augmented_catalog[srcname] = source_entry
 
         prefix = "The percentile points of the posterior "
         print prefix + "band 1 flux are [mJy]: " + \
-               utils.pm_error(posterior[0] * 1000., "%5.3g") + \
+               utils.pm_error(posterior["flux1"] * 1000., "%5.3g") + \
                " swapped detection: " + \
-               utils.pm_error(posterior_swap[0] * 1000., "%5.3g")
+               utils.pm_error(posterior_swap["flux1"] * 1000., "%5.3g")
 
         print prefix + "band 2 flux are [mJy]: " + \
-               utils.pm_error(posterior[1] * 1000., "%5.3g") + \
+               utils.pm_error(posterior["flux2"] * 1000., "%5.3g") + \
                " swapped detection: " + \
-               utils.pm_error(posterior_swap[1] * 1000., "%5.3g")
+               utils.pm_error(posterior_swap["flux2"] * 1000., "%5.3g")
 
         print prefix + "spectral indices are: " + \
-               utils.pm_error(posterior[2], "%5.3g") + \
+               utils.pm_error(posterior["alpha"], "%5.3g") + \
                " swapped detection: " + \
-               utils.pm_error(posterior_swap[2], "%5.3g")
+               utils.pm_error(posterior_swap["alpha"], "%5.3g")
 
         print prefix + "probability that the index exceeds " + \
-               repr(gp['spectral_threshold']) + ": " + repr(posterior[3]) + \
-               " swapped detection: " + repr(posterior_swap[3])
+               repr(gp['spectral_threshold']) + ": " + \
+               repr(posterior["prob_exceed"]) + \
+               " swapped detection: " + \
+               repr(posterior_swap["prob_exceed"])
 
     return augmented_catalog

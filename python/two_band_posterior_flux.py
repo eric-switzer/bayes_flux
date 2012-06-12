@@ -136,22 +136,23 @@ def two_band_posterior_flux(srcname, flux1, flux2, sigma1, sigma2, sigma12, s_in
                                 1., srcname, "", logscale=logscale)
 
     # calculate the summaries of the various output PDFs
-    flux1_percentiles = utils.percentile_points(flux_axis, flux1_dist,
+    summary = {}
+    summary["flux1"] = utils.percentile_points(flux_axis, flux1_dist,
                                                 gp['percentiles'])
 
-    flux2_percentiles = utils.percentile_points(flux_axis, flux2_dist,
+    summary["flux1"] = utils.percentile_points(flux_axis, flux2_dist,
                                                 gp['percentiles'])
 
-    alpha_percentiles = utils.percentile_points(alpha_axis, alpha_dist,
+    summary["alpha"] = utils.percentile_points(alpha_axis, alpha_dist,
                                                 gp['percentiles'])
 
-    probexceed = utils.prob_exceed(alpha_axis, alpha_dist,
+    summary["prob_exceed"] = utils.prob_exceed(alpha_axis, alpha_dist,
                                    gp['spectral_threshold'])
 
-    # can optionally output: flux_axis, alpha_axis, posterior_fluxindex
+    # TODO optionally output: flux_axis, alpha_axis, posterior_fluxindex
     # and posterior_fluxflux to get a full record of the posterior space
-    return (flux1_percentiles, flux2_percentiles, \
-            alpha_percentiles, probexceed)
+
+    return summary
 
 
 # TODO: numpy.einsum may be able to do some operations faster
