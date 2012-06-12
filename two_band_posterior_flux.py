@@ -126,9 +126,9 @@ def two_band_posterior_flux(srcname, flux1, flux2, sigma1, sigma2, sigma12, s_in
     if gp['make_2dplot']:
         logscale = True
         if swap_flux:
-            filename = "../plots/%s_fluxflux_swap.png" % srcname
+            filename = "plots/%s_fluxflux_swap.png" % srcname
         else:
-            filename = "../plots/%s_fluxflux.png" % srcname
+            filename = "plots/%s_fluxflux.png" % srcname
 
         plot_2d_pdf.gnuplot_2D(filename, posterior_fluxflux,
                                flux_axis * 1000., flux_axis * 1000.,
