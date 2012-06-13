@@ -123,6 +123,8 @@ def process_ptsrc_catalog_alpha(catalog, gp):
         for name in fields:
             source_entry[name] = catalog[srcindex][name]
 
+        source_entry["srcindex"] = srcindex
+
         # find the spectral index of the raw fluxes between bands
         try:
             source_entry["raw_simple_alpha"] = \
