@@ -128,8 +128,8 @@ class SelfDescribingTest(unittest.TestCase):
     """
     def test_rw(self):
         """test reading and writing of self-describing arrays"""
-        filein = "../data/test_self_describing.dat"
-        fileout = "../data/test_self_describing.out"
+        filein = "data/test_self_describing.dat"
+        fileout = "data/test_self_describing.out"
         testdata_in = load_selfdescribing_numpy(filein,
                                                 swaps={"name_for_x": "x",
                                                        "name_for_y": "y"},

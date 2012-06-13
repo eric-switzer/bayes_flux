@@ -14,7 +14,7 @@ def dnds_radio(input_s, freqtag, replacenan=0.):
     input_s is flux vector in Jy
     freqtag is the suffix of the counts file to load, e.g. '143GHz'
     """
-    table_filename = "../counts_data/Radio_model_counts_" + freqtag + ".txt"
+    table_filename = "counts_data/Radio_model_counts_" + freqtag + ".txt"
 
     # read log10(S^2.5*dN/dS) against logs
     logdnds_model = sd.load_selfdescribing_numpy(table_filename)
@@ -39,7 +39,7 @@ def dnds_ir(input_s, freqtag, replacenan=0.):
     input_s is flux vector in Jy
     freqtag is the suffix of the counts file to load, e.g. '143GHz'
     """
-    table_filename = "../counts_data/Bethermin_model_counts_" + \
+    table_filename = "counts_data/Bethermin_model_counts_" + \
                      freqtag + ".txt"
 
     # read dN/dS(per Jy per sr) against S(Jy)

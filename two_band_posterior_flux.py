@@ -3,9 +3,10 @@ import numpy as np
 import utilities as utils
 from scipy import interpolate
 from numpy import linalg as la
+import plot_2d_pdf
 
 
-def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
+def two_band_posterior_flux(srcname, flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
                             dnds2, gp, swap_flux=False):
     '''
     A wrapper to two band posterior flux methods which returns the
@@ -44,8 +45,18 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
     # convert the fractional beam/cal covariance to a flux covariance
     fluxes = np.array([flux1, flux2])
 
+    minflux = min([flux1 - 6. * sigma1, flux2 - 6. * sigma2])
+    # if the N-sigma point is < 0, reset it to be a little above 0
+    # so the log-space calculations do not have errors
+    if minflux < 0.:
+        minflux = flux1/100.
+
+    maxflux = max([flux1 + 6. * sigma1, flux2 + 6. * sigma2])
+
+    #flux_axis = np.linspace(minflux, maxflux, num=gp['num_flux'])
+    # alternate
     flux_axis = (np.arange(0, gp['num_flux']) + 0.5)
-    flux_axis *= 1. / float(gp['num_flux']) * 1.5 * max(fluxes)
+    flux_axis *= 1. / float(gp['num_flux']) * 1.5 * np.max(fluxes)
 
     # if given, convert the fractional calibration error into Jy^2
     if (gp['cov_calibration'] != None):
@@ -67,8 +78,8 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
 
     if gp['verbose']:
         print "joint code using noise covariance:" + repr(cov_noise_jy)
-        print "joint code using cal covariance:" + repr(cov_calibration_jy)
-        print "joint code using covariance:" + repr(total_covariance)
+        #print "joint code using cal covariance:" + repr(cov_calibration_jy)
+        print "joint code using total covariance:" + repr(total_covariance)
 
     if swap_flux:
         if gp['verbose']:
@@ -91,6 +102,7 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
         #flux2_dist = np.sum(posterior_fluxindex, axis=1)
         flux1_dist = np.sum(posterior_fluxflux, axis=0)
         flux2_dist = np.sum(posterior_fluxflux, axis=1)
+
     else:
         if gp['verbose']:
             print "running band-1 selected source case"
@@ -110,21 +122,37 @@ def two_band_posterior_flux(flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
         flux1_dist = np.sum(posterior_fluxflux, axis=1)
         flux2_dist = np.sum(posterior_fluxflux, axis=0)
 
+    # plot the 2D posteriors
+    if gp['make_2dplot']:
+        logscale = True
+        if swap_flux:
+            filename = "plots/%s_fluxflux_swap.png" % srcname
+        else:
+            filename = "plots/%s_fluxflux.png" % srcname
+
+        plot_2d_pdf.gnuplot_2D(filename, posterior_fluxflux,
+                               flux_axis * 1000., flux_axis * 1000.,
+                               ["148 GHz Flux (mJy)", "220 GHz Flux (mJy)"],
+                                1., srcname, "", logscale=logscale)
+
     # calculate the summaries of the various output PDFs
-    flux1_percentiles = utils.percentile_points(flux_axis, flux1_dist,
+    summary = {}
+    summary["flux1"] = utils.percentile_points(flux_axis, flux1_dist,
                                                 gp['percentiles'])
 
-    flux2_percentiles = utils.percentile_points(flux_axis, flux2_dist,
+    summary["flux2"] = utils.percentile_points(flux_axis, flux2_dist,
                                                 gp['percentiles'])
 
-    alpha_percentiles = utils.percentile_points(alpha_axis, alpha_dist,
+    summary["alpha"] = utils.percentile_points(alpha_axis, alpha_dist,
                                                 gp['percentiles'])
 
-    probexceed = utils.prob_exceed(alpha_axis, alpha_dist,
+    summary["prob_exceed"] = utils.prob_exceed(alpha_axis, alpha_dist,
                                    gp['spectral_threshold'])
 
-    return (flux1_percentiles, flux2_percentiles, \
-            alpha_percentiles, probexceed)
+    # TODO optionally output: flux_axis, alpha_axis, posterior_fluxindex
+    # and posterior_fluxflux to get a full record of the posterior space
+
+    return summary
 
 
 # TODO: numpy.einsum may be able to do some operations faster
@@ -255,6 +283,7 @@ def posterior_twoband_gaussian(s_measured1, s_measured2,
 
     # P(S_i1, S_i2 | S_m1, S_m2) = P(S_m1, S_m2 | S_i1, S_i2) P(S_i1, S_i2)
     posterior_fluxflux = likelihood_fluxflux * fluxprior_fluxflux * flux_prior
+    #posterior_fluxflux = fluxprior_fluxflux * flux_prior
 
     np.seterr(under='raise')
     if debug:

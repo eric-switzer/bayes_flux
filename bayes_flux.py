@@ -6,14 +6,28 @@ import compare_catalogs as cc
 import utilities as utils
 import process_catalog
 import shelve
-
+import os
 
 def wrap_process_catalog(params, translate):
     r"""Based on the ini file, load the catalog and general parameters
     """
-    catalog = sd.load_selfdescribing_numpy(params['catalog_filename'],
-                                           swaps=translate,
-                                           verbose=params['verbose'])
+    (root, extension) = os.path.splitext(params['catalog_filename'])
+
+    if extension == ".dat":
+        print "opening a catalog in the self-describing text format"
+        catalog = sd.load_selfdescribing_numpy(params['catalog_filename'],
+                                               swaps=translate,
+                                               verbose=params['verbose'])
+
+    if extension == ".pickle":
+        import pickle
+        import catalog
+        print "opening a catalog as a pickled catalog object"
+        catalog = pickle.load(open(params['catalog_filename'], "r"))
+
+    if not catalog:
+        print "Could not identify catalog type"
+        return
 
     augmented_catalog = process_catalog.process_ptsrc_catalog_alpha(
                                                     catalog, params)
@@ -23,10 +37,10 @@ def wrap_process_catalog(params, translate):
     outputshelve.close()
 
 
-def main():
+if __name__ == '__main__':
     r"""main command-line interface
-    python bayes_flux.py ../data/spt_catalog.ini | tee catalog_run.log
-    python bayes_flux.py ../data/spt_catalog.ini -c | tee comp.log
+    python bayes_flux.py data/spt_catalog.ini | tee catalog_run.log
+    python bayes_flux.py data/spt_catalog.ini -c | tee comp.log
     enscript -2Gr comp.log -p comprun.ps
     """
 
@@ -62,7 +76,3 @@ def main():
     else:
         print "comparing catalogs"
         cc.compare_catalogs(params, translate)
-
-
-if __name__ == '__main__':
-    main()

@@ -139,10 +139,17 @@ def percentile_points(axis, pdf, percentiles):
     cdf_points = np.zeros(len(percentiles), dtype=float)
 
     for index, percentile in enumerate(percentiles):
-        cdf = np.cumsum(pdf) / float(np.sum(pdf))
-        #print percentile
-        #print cdf
-        cdf_points[index] = np.nanmin(axis[cdf >= percentile])
+        try:
+            # oritinal
+            #cdf = np.cumsum(pdf) / float(np.sum(pdf))
+            #cdf = np.cumsum(pdf) / np.sum(pdf)
+            #cdf_points[index] = np.nanmin(axis[cdf >= percentile])
+            percentile_range = (np.cumsum(pdf) >= (percentile * np.sum(pdf)))
+            cdf_points[index] = np.nanmin(axis[percentile_range])
+        except FloatingPointError:
+            print "percentile_points: invalid PDF"
+            cdf = np.zeros_like(pdf)
+            cdf_points[index] = -1.
 
     return cdf_points
 
@@ -155,9 +162,15 @@ def fraction_exceeds(vector, threshold):
 
 def prob_exceed(axis, probability, threshold):
     """given x and P(x), find P(x>t)"""
-    exceeding = np.where(axis > threshold)
-    integral = integrate.simps(probability[exceeding], axis[exceeding])
-    return integral / integrate.simps(probability, axis)
+    try:
+        exceeding = np.where(axis > threshold)
+        integral = integrate.simps(probability[exceeding], axis[exceeding])
+        retval = integral / integrate.simps(probability, axis)
+    except FloatingPointError:
+        print "prob_exceed: invalid PDF"
+        retval = -1.
+
+    return retval
 
 
 # TODO: remove trailing space
