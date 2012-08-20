@@ -25,10 +25,6 @@ def wrap_process_catalog(params, translate):
         print "opening a catalog as a pickled catalog object"
         catalog = pickle.load(open(params['catalog_filename'], "r"))
 
-    if not catalog:
-        print "Could not identify catalog type"
-        return
-
     augmented_catalog = process_catalog.process_ptsrc_catalog_alpha(
                                                     catalog, params)
 
