@@ -8,27 +8,30 @@ import process_catalog
 import shelve
 import os
 
-def wrap_process_catalog(params, translate):
+
+def wrap_process_catalog(run_param, trans_table):
     r"""Based on the ini file, load the catalog and general parameters
     """
-    (root, extension) = os.path.splitext(params['catalog_filename'])
+    (root, extension) = os.path.splitext(run_param['catalog_filename'])
 
     if extension == ".dat":
         print "opening a catalog in the self-describing text format"
-        catalog = sd.load_selfdescribing_numpy(params['catalog_filename'],
-                                               swaps=translate,
-                                               verbose=params['verbose'])
+        catalog = sd.load_selfdescribing_numpy(run_param['catalog_filename'],
+                                               swaps=trans_table,
+                                               verbose=run_param['verbose'])
 
     if extension == ".pickle":
         import pickle
         import catalog
         print "opening a catalog as a pickled catalog object"
-        catalog = pickle.load(open(params['catalog_filename'], "r"))
+        catalog = pickle.load(open(run_param['catalog_filename'], "r"))
 
     augmented_catalog = process_catalog.process_ptsrc_catalog_alpha(
-                                                    catalog, params)
+                                                    catalog, run_param)
 
-    outputshelve = shelve.open(params['augmented_catalog'], flag="n")
+    outputshelve = shelve.open(run_param['augmented_catalog'],
+                               flag="n", protocol=-1)
+
     outputshelve.update(augmented_catalog)
     outputshelve.close()
 

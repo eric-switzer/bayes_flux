@@ -6,8 +6,8 @@ from numpy import linalg as la
 import plot_2d_pdf
 
 
-def two_band_posterior_flux(srcname, flux1, flux2, sigma1, sigma2, sigma12, s_in, dnds1,
-                            dnds2, gp, swap_flux=False):
+def two_band_posterior_flux(srcname, flux1, flux2, sigma1, sigma2, sigma12,
+                            s_in, dnds1, dnds2, gp, swap_flux=False):
     '''
     A wrapper to two band posterior flux methods which returns the
     marginalized S_1, S_2 and alpha distributions flux and sigma for each
@@ -49,10 +49,9 @@ def two_band_posterior_flux(srcname, flux1, flux2, sigma1, sigma2, sigma12, s_in
     # if the N-sigma point is < 0, reset it to be a little above 0
     # so the log-space calculations do not have errors
     if minflux < 0.:
-        minflux = flux1/100.
+        minflux = flux1 / 100.
 
-    maxflux = max([flux1 + 6. * sigma1, flux2 + 6. * sigma2])
-
+    #maxflux = max([flux1 + 6. * sigma1, flux2 + 6. * sigma2])
     #flux_axis = np.linspace(minflux, maxflux, num=gp['num_flux'])
     # alternate
     flux_axis = (np.arange(0, gp['num_flux']) + 0.5)
@@ -288,22 +287,22 @@ def posterior_twoband_gaussian(s_measured1, s_measured2,
     np.seterr(under='raise')
     if debug:
         import shelve
-        d = shelve.open("posterior.shelve")
-        d["likelihood_fluxindex"] = likelihood_fluxindex
-        d["fluxprior_fluxindex"] = fluxprior_fluxindex
-        d["index_prior_matrix"] = index_prior_matrix
-        d["likelihood_fluxflux"] = likelihood_fluxflux
-        d["fluxprior_fluxflux"] = fluxprior_fluxflux
-        d["flux_prior"] = flux_prior
-        d["dnds_in"] = dnds_model
-        d["s_in"] = s_dnds_model
-        d["ngts_in"] = utils.dnds_to_ngts(s_dnds_model, dnds_model)
-        d["psmax"] = pdf_prior_flux
-        d["alpha_axis"] = alpha_axis
-        d["flux_axis"] = flux_axis
-        d["posterior_fluxindex"] = posterior_fluxindex
-        d["posterior_fluxflux"] = posterior_fluxflux
-        d.close()
+        out_shelve = shelve.open("posterior.shelve", flag="n", protocol=-1)
+        out_shelve["likelihood_fluxindex"] = likelihood_fluxindex
+        out_shelve["fluxprior_fluxindex"] = fluxprior_fluxindex
+        out_shelve["index_prior_matrix"] = index_prior_matrix
+        out_shelve["likelihood_fluxflux"] = likelihood_fluxflux
+        out_shelve["fluxprior_fluxflux"] = fluxprior_fluxflux
+        out_shelve["flux_prior"] = flux_prior
+        out_shelve["dnds_in"] = dnds_model
+        out_shelve["s_in"] = s_dnds_model
+        out_shelve["ngts_in"] = utils.dnds_to_ngts(s_dnds_model, dnds_model)
+        out_shelve["psmax"] = pdf_prior_flux
+        out_shelve["alpha_axis"] = alpha_axis
+        out_shelve["flux_axis"] = flux_axis
+        out_shelve["posterior_fluxindex"] = posterior_fluxindex
+        out_shelve["posterior_fluxflux"] = posterior_fluxflux
+        out_shelve.close()
         quit()
 
     return (posterior_fluxindex, posterior_fluxflux)
