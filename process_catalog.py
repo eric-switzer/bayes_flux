@@ -1,4 +1,5 @@
 """Process the catalog source-by-source, calling the Bayesian code for each."""
+import math
 import numpy as np
 import source_count_models as dnds
 import utilities as utils
@@ -27,6 +28,7 @@ def process_ptsrc_catalog_alpha(catalog, gp):
     try:
         fields = catalog.cols.keys()
         catalog_size = len(catalog)
+        print "catalog fields: ", fields
     except:
         pass
 
@@ -71,6 +73,7 @@ def process_ptsrc_catalog_alpha(catalog, gp):
 
     augmented_catalog = {}
     for srcindex in np.arange(catalog_size):
+        print "-" * 80
         flux1 = catalog[srcindex][gp['flux1name']]
         flux2 = catalog[srcindex][gp['flux2name']]
 
@@ -84,6 +87,25 @@ def process_ptsrc_catalog_alpha(catalog, gp):
             sigma1 /= 1000.
             sigma2 /= 1000.
 
+        # estimate and remove bias due to maximizing source flux
+        # see Vanderlinde et al. cluster paper (there DOF=3)
+        # if the SNR^2 is less than the DOF, retain the original value
+        if gp['sourcefinder_dof'] is not None:
+            snr1 = (flux1 / sigma1) ** 2.
+            snr2 = (flux2 / sigma2) ** 2.
+
+            if (snr1 > gp['sourcefinder_dof']) and (flux1 > 0.):
+                print "flux1 before positional deboosting: ", flux1 * 1000.
+                flux1 = sigma1 * np.sqrt(snr1 - gp['sourcefinder_dof'])
+            else:
+                print "WARNING: band1 has SNR < DOF, no positional deboosting"
+
+            if (snr2 > gp['sourcefinder_dof']) and (flux2 > 0.):
+                print "flux2 before positional deboosting: ", flux2 * 1000.
+                flux2 = sigma2 * np.sqrt(snr2 - gp['sourcefinder_dof'])
+            else:
+                print "WARNING: band2 has SNR < DOF, no positional deboosting"
+
         # if the catalog has off-diagonal covariance for the flux
         #if gp['sigma12name'] != None:
         #    sigma12 = catalog[srcindex][gp['sigma12name']]
@@ -96,7 +118,6 @@ def process_ptsrc_catalog_alpha(catalog, gp):
 
         srcname = repr(catalog[srcindex][gp['keyfield_name']])
 
-        print "-" * 80
         print "Starting analysis on source %s (# %d), " % \
                     (srcname, srcindex) + \
                "flux1 is [mJy]: %5.3g +/- %5.3g, " % \
