@@ -14,7 +14,7 @@ def gnuplot_2D(outfilename, region, xaxis, yaxis, xylabels,
 
     if logscale:
         # TODO: this is a kludge
-        region += np.max(region)/1.e6
+        region += np.max(region) / 1.e6
         try:
             region = np.log10(region)
         except FloatingPointError:
@@ -92,10 +92,8 @@ def gnuplot_2D(outfilename, region, xaxis, yaxis, xylabels,
     input_data_file.close()
 
     if eps_outfile is None:
-        subprocess.check_call(('convert', '-density', density, '-trim', '+repage',
-                               '-border', '40x40', '-bordercolor', 'white',
-                                outplot_file.name, outfilename))
+        subprocess.check_call(('convert', '-density', density, '-trim',
+                               '+repage', '-border', '40x40', '-bordercolor',
+                                'white', outplot_file.name, outfilename))
 
     outplot_file.close()
-
-
