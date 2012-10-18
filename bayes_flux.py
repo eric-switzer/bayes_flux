@@ -8,7 +8,7 @@ import process_catalog
 import shelve
 import os
 
-def wrap_process_catalog(params, translate):
+def wrap_process_catalog(params, translate, print_only=False):
     r"""Based on the ini file, load the catalog and general parameters
     """
     (root, extension) = os.path.splitext(params['catalog_filename'])
@@ -25,12 +25,15 @@ def wrap_process_catalog(params, translate):
         print "opening a catalog as a pickled catalog object"
         catalog = pickle.load(open(params['catalog_filename'], "r"))
 
-    augmented_catalog = process_catalog.process_ptsrc_catalog_alpha(
-                                                    catalog, params)
+    if not print_only:
+        augmented_catalog = process_catalog.process_ptsrc_catalog_alpha(
+                                                        catalog, params)
 
-    outputshelve = shelve.open(params['augmented_catalog'], flag="n")
-    outputshelve.update(augmented_catalog)
-    outputshelve.close()
+        outputshelve = shelve.open(params['augmented_catalog'], flag="n")
+        outputshelve.update(augmented_catalog)
+        outputshelve.close()
+    else:
+        print catalog
 
 
 if __name__ == '__main__':
@@ -44,6 +47,12 @@ if __name__ == '__main__':
                       dest="compareflag",
                       default=False,
                       help="Compare with a published catalog")
+
+    parser.add_option("-p", "--print",
+                      action="store_true",
+                      dest="print_only",
+                      default=False,
+                      help="Just print the catalog and exit")
 
     (options, args) = parser.parse_args()
     optdict = vars(options)
@@ -64,7 +73,9 @@ if __name__ == '__main__':
 
     if not optdict['compareflag']:
         print "augmenting the catalog with posterior distrubtions"
-        wrap_process_catalog(params, translate)
+        wrap_process_catalog(params, translate,
+                             print_only=optdict['print_only'])
+
     else:
         print "comparing catalogs"
         cc.compare_catalogs(params, translate)

@@ -22,8 +22,8 @@ def compare_catalogs(params, translate, septol=1e-2):
                                      comp_catalog[:]["SNR150"],
                                      comp_catalog[:]["SNR220"])
 
-    outfile = open("comparison.dat", "w")
-    raw_outfile = open("raw_comparison.dat", "w")
+    outfile = open("comparison/comparison.dat", "w")
+    raw_outfile = open("comparison/raw_comparison.dat", "w")
 
     for srcname in augmented_catalog:
         entry = augmented_catalog[srcname]
