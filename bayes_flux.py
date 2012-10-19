@@ -8,7 +8,7 @@ import process_catalog
 import shelve
 import os
 
-def wrap_process_catalog(params, translate, print_only=False):
+def wrap_process_catalog(run_param, trans_table, print_only=False):
     r"""Based on the ini file, load the catalog and general parameters
     """
     (root, extension) = os.path.splitext(run_param['catalog_filename'])
@@ -27,9 +27,9 @@ def wrap_process_catalog(params, translate, print_only=False):
 
     if not print_only:
         augmented_catalog = process_catalog.process_ptsrc_catalog_alpha(
-                                                        catalog, params)
+                                                        catalog, run_param)
 
-        outputshelve = shelve.open(params['augmented_catalog'], flag="n",
+        outputshelve = shelve.open(run_param['augmented_catalog'], flag="n",
                                    protocol=-1)
         outputshelve.update(augmented_catalog)
         outputshelve.close()
