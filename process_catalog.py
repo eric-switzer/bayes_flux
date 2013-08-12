@@ -68,8 +68,15 @@ def process_ptsrc_catalog_alpha(catalog, gp):
         dnds_tot_linear_band2 = sptdnds.\
             total_SPTmodel_counts(input_s_linear, gp['freq2'])
     else:
-        dnds_tot_linear_band1 = dnds.dnds_total(input_s_linear, "143GHz")
-        dnds_tot_linear_band2 = dnds.dnds_total(input_s_linear, "217GHz")
+        dnds_tot_linear_band1 = dnds.dnds_radio(input_s_linear, "143GHz") +\
+                                dnds.dnds_ir(input_s_linear, "143GHz")
+        #dnds_tot_linear_band1 = dnds.dnds_tucci(input_s_linear, "148GHz") +\
+        #                        dnds.dnds_ir(input_s_linear, "143GHz")
+
+        dnds_tot_linear_band2 = dnds.dnds_radio(input_s_linear, "217GHz") +\
+                                dnds.dnds_ir(input_s_linear, "217GHz")
+        #dnds_tot_linear_band2 = dnds.dnds_tucci(input_s_linear, "220GHz") +\
+        #                        dnds.dnds_ir(input_s_linear, "217GHz")
 
     augmented_catalog = {}
     for srcindex in np.arange(catalog_size):

@@ -4,7 +4,8 @@ import numpy as np
 import self_describing as sd
 import utilities as utils
 import shelve
-
+# ACT: 149.0 GHz, SPT: 152.
+# ACT: 219.6 GHz, SPT: 219.5
 
 def compare_catalogs(params, translate, septol=1e-2):
     """compare a deboosted catalog with one in literature
@@ -85,10 +86,17 @@ def compare_catalogs(params, translate, septol=1e-2):
                                orig["d_alpha_up"],
                                orig["d_alpha_down"]])
 
+        reband_factor = (152./149.) ** orig_alpha[0]
+        print "scaling for index ", orig_alpha, reband_factor
+
         frange1 = [orig_flux1[0] - orig_flux1[2], orig_flux1[0],
                    orig_flux1[0] + orig_flux1[1]]
+
+        frange1 /= reband_factor
+
         frange2 = [orig_flux2[0] - orig_flux2[2], orig_flux2[0],
                    orig_flux2[0] + orig_flux2[1]]
+
         alrange = [orig_alpha[0] - orig_alpha[2], orig_alpha[0],
                    orig_alpha[0] + orig_alpha[1]]
 

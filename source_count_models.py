@@ -23,8 +23,31 @@ def dnds_radio(input_s, freqtag, replacenan=0.):
                                           logdnds_model['dnds_total'],
                                           bounds_error=False,
                                           fill_value=np.nan)
+
     dnds = 10. ** interpolant(np.log10(input_s)) / input_s ** 2.5
     dnds *= (math.pi / 180.) ** 2.
+    dnds[np.isnan(dnds)] = replacenan
+
+    return dnds
+
+
+def dnds_tucci(input_s, freqtag, replacenan=0.):
+    """
+    alternate dN/dS from Tucci
+    freqtag = 148GHz or 220GHz
+    return radio counts as dN/dS per Jy per deg^2
+    input_s is flux vector in Jy
+    """
+    table_filename = "counts_data/ns_%s_modC2Ex.dat" % freqtag
+
+    # read dN/dS against logs
+    logdnds_model = sd.load_selfdescribing_numpy(table_filename)
+
+    interpolant = sp.interpolate.interp1d(np.log10(logdnds_model['flux']),
+                                    np.log10(logdnds_model['dnds_total']),
+                                    bounds_error=False, fill_value=np.nan)
+
+    dnds = 10. ** interpolant(np.log10(input_s)) * (math.pi / 180.) ** 2.
     dnds[np.isnan(dnds)] = replacenan
 
     return dnds
@@ -48,6 +71,7 @@ def dnds_ir(input_s, freqtag, replacenan=0.):
     interpolant = sp.interpolate.interp1d(np.log10(logdnds_model['flux']),
                                  np.log10(logdnds_model['dnds_median']),
                                  bounds_error=False, fill_value=np.nan)
+
     dnds = 10. ** interpolant(np.log10(input_s)) * (math.pi / 180.) ** 2.
     dnds[np.isnan(dnds)] = replacenan
 
